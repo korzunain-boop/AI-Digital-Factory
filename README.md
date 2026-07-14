@@ -9,14 +9,14 @@ Source of truth (repo root):
 
 ## Project Status
 
-| Field                          | Status                                                                           |
-| ------------------------------ | -------------------------------------------------------------------------------- |
-| **Current Milestone**          | M4 — Generator Engine implemented (fake strategy for tests only)                 |
-| **Architecture Status**        | Approved; Engine + Domain/Application contracts in place                         |
-| **Business Validation Status** | Not started (gate defined in `PROJECT.md`)                                       |
-| **Generator Status**           | Engine live; **no real product strategy** yet (First Commercial Generator = M6)  |
-| **Research Status**            | `ResearchProvider` port only — no adapter implementation yet                     |
-| **Publisher Status**           | `Publisher` / `ExportProductService` contracts only — export not implemented yet |
+| Field                          | Status                                                                 |
+| ------------------------------ | ---------------------------------------------------------------------- |
+| **Current Milestone**          | M5 — Pipeline Execution (Generator only; other stages NotImplemented)  |
+| **Architecture Status**        | Approved; Engine + PipelineExecutor orchestration in place             |
+| **Business Validation Status** | Not started (gate defined in `PROJECT.md`)                             |
+| **Generator Status**           | Engine live via pipeline; **no real product strategy** yet (M6)        |
+| **Research Status**            | NotImplemented placeholder (tests may stub success to reach Generator) |
+| **Publisher Status**           | NotImplemented placeholder — export not implemented yet                |
 
 ## Prerequisites
 
