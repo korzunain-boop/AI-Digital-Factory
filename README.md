@@ -8,14 +8,14 @@ Source of truth (repo root):
 
 ## Project Status
 
-| Field                          | Status                                                                                 |
-| ------------------------------ | -------------------------------------------------------------------------------------- |
-| **Current Milestone**          | M2 — Architecture Baseline (contracts only)                                            |
-| **Architecture Status**        | Approved; Domain contracts frozen under `packages/domain` (interfaces + object shapes) |
-| **Business Validation Status** | Not started (gate defined in `PROJECT.md`)                                             |
-| **Generator Status**           | Strategy/Engine **interfaces only** — First Commercial Generator not implemented (M6)  |
-| **Research Status**            | `ResearchProvider` port only — no external/manual adapter implementation yet           |
-| **Publisher Status**           | `Publisher` port only — export mode not implemented yet                                |
+| Field                          | Status                                                                                |
+| ------------------------------ | ------------------------------------------------------------------------------------- |
+| **Current Milestone**          | M3 — Application Layer foundation (orchestration contracts)                           |
+| **Architecture Status**        | Approved; Domain + Application contracts in place; no stage behavior yet              |
+| **Business Validation Status** | Not started (gate defined in `PROJECT.md`)                                            |
+| **Generator Status**           | Strategy/Engine **interfaces only** — First Commercial Generator not implemented (M6) |
+| **Research Status**            | `ResearchProvider` port only — no adapter implementation yet                          |
+| **Publisher Status**           | `Publisher` / `ExportProductService` contracts only — export not implemented yet      |
 
 ## Prerequisites
 
@@ -51,7 +51,7 @@ npm run start -w @ai-product-factory/api
 apps/api              REST API + composition root (empty wiring in M1/M2)
 apps/dashboard        Operator UI placeholder (empty until M8)
 packages/domain       Domain contracts: objects, Engine, strategies, Assembler, QA, Publisher, providers
-packages/application  Application use cases (empty until later milestones)
+packages/application  Application use cases (M3 orchestration contracts; NotImplemented)
 packages/infrastructure Provider implementations (empty until later milestones)
 packages/shared       Shared kernel (empty)
 tests/                Tests root (empty until tests exist)
