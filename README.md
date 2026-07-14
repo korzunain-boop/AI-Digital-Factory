@@ -9,14 +9,14 @@ Source of truth (repo root):
 
 ## Project Status
 
-| Field                          | Status                                                                 |
-| ------------------------------ | ---------------------------------------------------------------------- |
-| **Current Milestone**          | M8 — Prompt Generation Layer (PromptBuilder → ImageProvider)           |
-| **Architecture Status**        | Approved; Clipart → PromptBuilder → ImageProvider → AssetBundle        |
-| **Business Validation Status** | Not started (gate defined in `PROJECT.md`)                             |
-| **Generator Status**           | Clipart + DefaultPromptBuilder + FakeImageProvider (no AI APIs)        |
-| **Research Status**            | NotImplemented placeholder (tests may stub success to reach Generator) |
-| **Publisher Status**           | NotImplemented placeholder — export not implemented yet                |
+| Field                          | Status                                                                               |
+| ------------------------------ | ------------------------------------------------------------------------------------ |
+| **Current Milestone**          | M9 — HTTP Image Provider Infrastructure                                              |
+| **Architecture Status**        | Approved; HTTP ImageProvider adapters ready (OpenAI demo isolated)                   |
+| **Business Validation Status** | Not started (gate defined in `PROJECT.md`)                                           |
+| **Generator Status**           | Clipart + DefaultPromptBuilder + FakeImageProvider (OpenAI adapter ready, not wired) |
+| **Research Status**            | NotImplemented placeholder (tests may stub success to reach Generator)               |
+| **Publisher Status**           | NotImplemented placeholder — export not implemented yet                              |
 
 ## Prerequisites
 
@@ -54,7 +54,7 @@ apps/api              REST API + composition root (empty wiring in M1/M2)
 apps/dashboard        Operator UI placeholder (empty until M8)
 packages/domain       Domain contracts: objects, Engine, strategies, Assembler, QA, Publisher, providers
 packages/application  Application use cases (M3 orchestration contracts; NotImplemented)
-packages/infrastructure Provider implementations (empty until later milestones)
+packages/infrastructure Provider implementations (HTTP image base + OpenAI demo in M9)
 packages/shared       Shared kernel (empty)
 tests/                Tests root (empty until tests exist)
 ```

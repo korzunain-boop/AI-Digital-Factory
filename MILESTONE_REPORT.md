@@ -17,7 +17,8 @@ Source of truth for product/architecture remains `PROJECT.md`, `DECISIONS.md`, a
 | M6        | First Commercial Generator (Clipart)  | Complete    |
 | M7        | Image Provider Abstraction            | Complete    |
 | M8        | Prompt Generation Layer               | Complete    |
-| M9+       | Assembler / Dashboard / QA / Export … | Not started |
+| M9        | HTTP Image Provider Infrastructure    | Complete    |
+| M10+      | Assembler / Dashboard / QA / Export … | Not started |
 
 ---
 
@@ -374,7 +375,7 @@ Run: `npm test` (19 tests).
 
 ### Next Milestone
 
-**Assembler** (or dashboard per SYSTEM numbering): package AssetBundles into ProductPackages. Real ImageProvider adapters consume `ImageGenerationPrompt.prompts` without changing PromptBuilder/Engine.
+**M9 — HTTP Image Provider Infrastructure** — complete (see below).
 
 ### Self-review (M8)
 
@@ -398,6 +399,95 @@ Run: `npm test` (19 tests).
 - Generalize PromptBuilderInput beyond Clipart template fields when a second product type appears
 - Optionally add prompt versioning / catalog ids for marketplace audit
 - Wire PromptBuilder + FakeImageProvider (then real provider) in composition root
+
+---
+
+## M9 — HTTP Image Provider Infrastructure
+
+**Date:** 2026-07-14
+
+### Implemented
+
+- Reusable `HttpImageProviderBase` — generic HTTP responsibilities only:
+  - HTTP client abstraction (`HttpClient`)
+  - Bearer auth headers from injected config
+  - request execution + timeout (via `HttpRequest.timeoutMs`)
+  - retry policy for transient failures
+  - response status validation + JSON parse
+  - HTTP/raw error → provider error hierarchy
+- Injected `ImageProviderConfig` (`apiKey`, `baseUrl`, `model`, `timeoutMs`, `retries`) — no globals/hardcoded secrets
+- Provider error hierarchy: `AuthenticationError`, `RateLimitError`, `InvalidResponseError`, `ProviderUnavailableError`, `ProviderTimeoutError`
+- `FetchHttpClient` (production adapter; unused by unit tests)
+- Demonstration `OpenAIImageProvider` — **all** OpenAI-specific paths/payloads/parsing isolated here
+- Domain `ImageProvider` contract unchanged; Engine / PipelineExecutor / PromptBuilder / Clipart unchanged
+- Returns image URLs or `data:` binary payloads per existing `GeneratedImages` contract (no StorageProvider)
+
+### Files Added
+
+| Path                                                                          | Purpose                                 |
+| ----------------------------------------------------------------------------- | --------------------------------------- |
+| `packages/infrastructure/src/http/http-client.ts`                             | HttpClient / HttpRequest / HttpResponse |
+| `packages/infrastructure/src/http/fetch-http-client.ts`                       | Fetch-based HttpClient                  |
+| `packages/infrastructure/src/providers/image/image-provider-config.ts`        | Injected ImageProviderConfig            |
+| `packages/infrastructure/src/providers/image/provider-errors.ts`              | Provider error hierarchy                |
+| `packages/infrastructure/src/providers/image/http-image-provider-base.ts`     | Reusable HTTP base (vendor-agnostic)    |
+| `packages/infrastructure/src/providers/image/openai/openai-image-provider.ts` | OpenAI Images demo adapter              |
+| `packages/infrastructure/src/index.ts`                                        | Public exports                          |
+| `tests/infrastructure/openai-image-provider.test.ts`                          | Mocked HTTP unit tests                  |
+
+### Tests
+
+| Test                        | Asserts                                          |
+| --------------------------- | ------------------------------------------------ |
+| Successful URL response     | GeneratedImages location + auth/model on request |
+| Successful b64_json         | location is data:image/png;base64,…              |
+| Authentication 401/403      | AuthenticationError; no raw fetch errors         |
+| Timeout (AbortError)        | ProviderTimeoutError                             |
+| Invalid JSON / missing data | InvalidResponseError                             |
+| Error translation 429/503   | RateLimitError / ProviderUnavailableError        |
+| Network failure             | ProviderUnavailableError                         |
+| Retries                     | retries then success; no retry on auth           |
+| Config validation           | apiKey required; baseUrl trailing slash stripped |
+
+Run: `npm test` (mocked HttpClient only — no live network / no real API keys).
+
+### Known Limitations
+
+1. Composition root does **not** wire `OpenAIImageProvider` yet — Clipart still uses `FakeImageProvider` in tests.
+2. No StorageProvider — URLs / data-URLs are returned as `GeneratedImage.location` only.
+3. No real API key, no live OpenAI calls.
+4. `FetchHttpClient` exists but is not exercised by M9 unit tests (by design).
+5. OpenAI is one demo vendor; Flux/Ideogram would be additional subclasses of the same base.
+6. `RunPipelineService` still NotImplemented; Research/Assembler/QA/Publisher still placeholders.
+
+### Next Milestone
+
+**Assembler** (or next engineering milestone per active roadmap): package AssetBundles into ProductPackages. Optionally wire composition root: config → OpenAIImageProvider → Clipart — first real image path without changing Engine/Pipeline/PromptBuilder/Clipart.
+
+### Self-review (M9)
+
+**Why provider switching is now easy**
+
+- Domain still depends only on `ImageProvider`
+- Shared HTTP concerns live in `HttpImageProviderBase` + injected `ImageProviderConfig` + `HttpClient`
+- New vendors = new subclass under `providers/image/<vendor>/` implementing `doGenerateImages`
+- Swap at composition root: `new ClipartGeneratorStrategy(promptBuilder, new FluxImageProvider(config, http))` — Engine / Pipeline / PromptBuilder / Clipart stay untouched
+
+**Remaining work before the first real image**
+
+1. Map env → `ImageProviderConfig` in composition root (no hardcoded secrets in code)
+2. Wire `OpenAIImageProvider` + `FetchHttpClient` into Clipart registration
+3. Provide a real API key via env at runtime (never committed)
+4. Optional: StorageProvider to persist bytes instead of remote URLs / data-URLs
+5. Optional: stub Research so a full pipeline job can reach Generator
+
+**Technical debt**
+
+- Retry backoff is immediate re-attempt (no jitter/backoff delays yet)
+- `ProviderUnavailableError` also covers non-2xx client errors outside 401/403/429 — may want finer codes later
+- OpenAI size mapping is a coarse width/height → enum heuristic
+- Negative prompts unused by OpenAI Images API mapping (left in Domain prompt for other vendors)
+- Composition root still does not assemble the real provider graph
 
 ---
 
