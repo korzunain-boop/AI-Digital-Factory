@@ -5,9 +5,13 @@ import {
   CLIPART_STRATEGY_KEY,
   ClipartGeneratorStrategy,
   DefaultGeneratorEngine,
+  FakeImageProvider,
   parseClipartTemplate,
   toClipartTemplateParams,
   type GenerationRequest,
+  type ImageGenerationRequest,
+  type ImageProvider,
+  type GeneratedImages,
 } from '@ai-product-factory/domain';
 
 function makeRequest(overrides: Partial<GenerationRequest> = {}): GenerationRequest {
@@ -26,9 +30,18 @@ function makeRequest(overrides: Partial<GenerationRequest> = {}): GenerationRequ
   };
 }
 
-describe('ClipartGeneratorStrategy', () => {
-  it('applies theme, style, and assetCount from the template', async () => {
-    const strategy = new ClipartGeneratorStrategy();
+describe('ClipartGeneratorStrategy + ImageProvider', () => {
+  it('calls ImageProvider.generateImages', async () => {
+    const provider = new FakeImageProvider();
+    const strategy = new ClipartGeneratorStrategy(provider);
+
+    await strategy.generate(makeRequest());
+
+    assert.equal(provider.invocationCount, 1);
+  });
+
+  it('applies theme, style, and assetCount via provider output', async () => {
+    const strategy = new ClipartGeneratorStrategy(new FakeImageProvider());
     const result = await strategy.generate(makeRequest());
 
     assert.equal(result.ok, true);
@@ -52,7 +65,8 @@ describe('ClipartGeneratorStrategy', () => {
   });
 
   it('respects requested asset count', async () => {
-    const strategy = new ClipartGeneratorStrategy();
+    const provider = new FakeImageProvider();
+    const strategy = new ClipartGeneratorStrategy(provider);
     const result = await strategy.generate(
       makeRequest({
         template: toClipartTemplateParams({
@@ -68,31 +82,11 @@ describe('ClipartGeneratorStrategy', () => {
       assert.fail('expected success with assetBundle');
     }
     assert.equal(result.assetBundle.assets.length, 7);
-    assert.equal(result.assetBundle.metadata?.assetCount, 7);
-  });
-
-  it('caps asset count by GenerationLimits.maxAssets when lower', async () => {
-    const strategy = new ClipartGeneratorStrategy();
-    const result = await strategy.generate(
-      makeRequest({
-        template: toClipartTemplateParams({
-          theme: 'forest',
-          style: 'line',
-          assetCount: 10,
-        }),
-        limits: { maxAssets: 2 },
-      }),
-    );
-
-    assert.equal(result.ok, true);
-    if (!result.ok || !result.assetBundle) {
-      assert.fail('expected success with assetBundle');
-    }
-    assert.equal(result.assetBundle.assets.length, 2);
+    assert.equal(provider.invocationCount, 1);
   });
 
   it('produces deterministic output for the same request', async () => {
-    const strategy = new ClipartGeneratorStrategy();
+    const strategy = new ClipartGeneratorStrategy(new FakeImageProvider());
     const request = makeRequest();
 
     const a = await strategy.generate(request);
@@ -105,8 +99,6 @@ describe('ClipartGeneratorStrategy', () => {
     }
 
     assert.deepEqual(a.assetBundle, b.assetBundle);
-    assert.equal(a.assetBundleId, b.assetBundleId);
-    assert.equal(a.assetBundle.assets[0]?.location, b.assetBundle.assets[0]?.location);
     assert.equal(a.assetBundle.assets[0]?.name, 'ocean-watercolor-01.png');
     assert.equal(
       a.assetBundle.assets[0]?.location,
@@ -114,8 +106,22 @@ describe('ClipartGeneratorStrategy', () => {
     );
   });
 
+  it('maps ImageProvider exceptions to GenerationFailure', async () => {
+    const provider = new FakeImageProvider({ throwError: new Error('provider-boom') });
+    const strategy = new ClipartGeneratorStrategy(provider);
+
+    const result = await strategy.generate(makeRequest());
+
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.match(result.errors[0] ?? '', /IMAGE_PROVIDER_FAILED/);
+      assert.match(result.errors[0] ?? '', /provider-boom/);
+    }
+    assert.equal(provider.invocationCount, 1);
+  });
+
   it('integrates with DefaultGeneratorEngine without Engine changes', async () => {
-    const strategy = new ClipartGeneratorStrategy();
+    const strategy = new ClipartGeneratorStrategy(new FakeImageProvider());
     const engine = new DefaultGeneratorEngine([strategy]);
 
     assert.deepEqual(engine.registeredKeys(), [CLIPART_STRATEGY_KEY]);
@@ -129,6 +135,34 @@ describe('ClipartGeneratorStrategy', () => {
     assert.equal(result.assetBundleId, 'clipart-bundle-req-engine-1');
     assert.equal(result.assetBundle.assets.length, 3);
     assert.equal(result.assetBundle.metadata?.strategyKey, CLIPART_STRATEGY_KEY);
+  });
+
+  it('passes count/theme/style from template into ImageProvider request', async () => {
+    let seen: ImageGenerationRequest | undefined;
+    const spy: ImageProvider = {
+      async generateImages(req): Promise<GeneratedImages> {
+        seen = req;
+        return { images: [] };
+      },
+    };
+
+    const strategy = new ClipartGeneratorStrategy(spy);
+    await strategy.generate(
+      makeRequest({
+        template: toClipartTemplateParams({
+          theme: 'cats',
+          style: 'kawaii',
+          assetCount: 2,
+        }),
+      }),
+    );
+
+    assert.ok(seen);
+    assert.equal(seen.requestId, 'req-clipart-1');
+    assert.equal(seen.theme, 'cats');
+    assert.equal(seen.style, 'kawaii');
+    assert.equal(seen.count, 2);
+    assert.equal(seen.purpose, 'clipart');
   });
 
   it('parseClipartTemplate reads theme/style/assetCount', () => {

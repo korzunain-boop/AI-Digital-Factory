@@ -1,8 +1,8 @@
 /**
  * @ai-product-factory/domain
  *
- * Domain contracts, Generator Engine (M4), and Clipart commercial strategy skeleton (M6).
- * No provider adapters, marketplace, filesystem, or AI SDK usage.
+ * Domain contracts through Milestone M7 (ImageProvider abstraction + Clipart via provider).
+ * No marketplace, filesystem, or AI SDK usage in FakeImageProvider.
  */
 
 export type * from './objects/index.js';
@@ -27,9 +27,24 @@ export {
   parseClipartTemplate,
   toClipartTemplateParams,
   ClipartGeneratorStrategy,
-  buildClipartAssetBundle,
+  assembleClipartAssetBundle,
 } from './strategies/index.js';
 export type { AssembleInput, Assembler } from './assembler/index.js';
 export type { QA } from './qa/index.js';
 export type { PublishInput, Publisher } from './publisher/index.js';
-export type * from './providers/index.js';
+export type {
+  ResearchIngestInput,
+  ResearchProvider,
+  TextGenerateInput,
+  TextGenerateOutput,
+  TextProvider,
+  ImageGenerationRequest,
+  GeneratedImage,
+  GeneratedImages,
+  ImageProvider,
+  StoragePutInput,
+  StorageProvider,
+  MarketplacePublishInput,
+  MarketplaceProvider,
+} from './providers/index.js';
+export { FakeImageProvider } from './providers/index.js';

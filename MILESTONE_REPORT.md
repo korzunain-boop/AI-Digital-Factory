@@ -15,7 +15,8 @@ Source of truth for product/architecture remains `PROJECT.md`, `DECISIONS.md`, a
 | M4        | Generator Engine                      | Complete    |
 | M5        | Pipeline Execution                    | Complete    |
 | M6        | First Commercial Generator (Clipart)  | Complete    |
-| M7+       | Assembler / QA / Export Publisher / … | Not started |
+| M7        | Image Provider Abstraction            | Complete    |
+| M8+       | Assembler / Dashboard / QA / Export … | Not started |
 
 ---
 
@@ -212,7 +213,7 @@ Run: `npm test` (16 tests: M4 Engine + M5 Pipeline + M6 Clipart).
 
 ### Next Milestone
 
-**M7 — Assembler** (per `SYSTEM.md`): turn real/deterministic AssetBundles into ProductPackages (ZIP, previews, metadata). Still no marketplace automation.
+**M7 — Image Provider Abstraction** — complete (see below).
 
 ### Self-review (M6)
 
@@ -233,6 +234,84 @@ Run: `npm test` (16 tests: M4 Engine + M5 Pipeline + M6 Clipart).
 - Persist bundles via JobRepository/Storage instead of optional in-result `assetBundle`
 - Wire Clipart into composition root + CreateJob strategyKey defaults
 - Optional richer template fields (palette, pack naming) only after Commercial Validation needs them
+
+---
+
+## M7 — Image Provider Abstraction
+
+**Date:** 2026-07-14
+
+### Implemented
+
+- `ImageProvider.generateImages(request) → GeneratedImages` (batch port; replaces prior single-image draft API)
+- `FakeImageProvider` — deterministic fake images matching former M6 Clipart inline assets
+- `ClipartGeneratorStrategy` now **depends on ImageProvider** (constructor injection):
+  - GenerationRequest → ImageProvider → AssetBundle → GenerationResult
+  - No longer builds image descriptors itself
+- `DefaultGeneratorEngine` unchanged
+- Unit tests: provider called, determinism, provider exceptions, Engine integration
+
+### Files Added / Changed
+
+| Path                                                                   | Purpose                                                        |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `packages/domain/src/providers/image-provider.ts`                      | `ImageGenerationRequest`, `GeneratedImage(s)`, `ImageProvider` |
+| `packages/domain/src/providers/fake-image-provider.ts`                 | Deterministic FakeImageProvider                                |
+| `packages/domain/src/strategies/clipart/clipart-generator-strategy.ts` | Delegates to ImageProvider; assembles AssetBundle              |
+| `tests/domain/clipart-generator-strategy.test.ts`                      | Updated/extended M7 tests                                      |
+
+### Interfaces Changed
+
+| Change                                                              | Why                                                               |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `ImageProvider.generateImages` + `GeneratedImages`                  | Explicit batch contract; strategies no longer invent image assets |
+| Removed unused single-shot `generate` / `ImageGenerateInput` draft  | Align Domain port with M7 responsibility (“nothing more”)         |
+| `ClipartGeneratorStrategy(images: ImageProvider)`                   | Required dependency injection of image generation                 |
+| `assembleClipartAssetBundle` (was inline `buildClipartAssetBundle`) | Strategy only maps provider output + clipart pack metadata        |
+
+### Tests
+
+| Test                  | Asserts                                                |
+| --------------------- | ------------------------------------------------------ |
+| Calls ImageProvider   | `FakeImageProvider.invocationCount === 1`              |
+| Template via provider | theme/style/count on AssetBundle from provider images  |
+| Asset count           | `assets.length === 7` etc.                             |
+| Deterministic         | identical requests → identical bundles                 |
+| Provider exceptions   | `IMAGE_PROVIDER_FAILED` GenerationFailure              |
+| Engine integration    | Clipart + FakeImageProvider via DefaultGeneratorEngine |
+| Spy request fields    | count/theme/style/purpose passed into `generateImages` |
+
+Run: `npm test`.
+
+### Known Limitations
+
+1. `FakeImageProvider` still does not produce real pixels or call AI APIs.
+2. No StorageProvider — locations remain `memory://…`.
+3. No TextProvider / Assembler / QA / Publisher / marketplace.
+4. Composition root not yet wiring `new ClipartGeneratorStrategy(new FakeImageProvider())`.
+
+### Next Milestone
+
+**M8** (product roadmap / dashboard) or **Assembler** per `SYSTEM.md` M7 historically — implement Packaging of AssetBundles. Real OpenAI ImageProvider is a later infrastructure swap, not a pipeline redesign.
+
+### Self-review (M7)
+
+**What changed**
+
+- Image descriptors moved from Clipart strategy into ImageProvider
+- Clipart only parses template, calls provider, wraps AssetBundle metadata
+
+**Why architecture improved**
+
+- Strategy stays product logic (template → pack); provider stays generation transport
+- OpenAI/Flux/Ideogram can implement `ImageProvider` without touching Engine or PipelineExecutor
+- Clear seam for testing with FakeImageProvider / spies
+
+**What M8 (or next) will replace**
+
+- FakeImageProvider → real ImageProvider adapter (OpenAI etc.)
+- Optionally StorageProvider for durable locations instead of `memory://`
+- Assembler consumes AssetBundles into ProductPackages
 
 ---
 

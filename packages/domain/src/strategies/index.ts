@@ -1,5 +1,5 @@
 /**
- * Generator Strategy contracts, registry, test fake (M4), and Clipart commercial strategy (M6).
+ * Generator Strategy contracts, registry, test fake (M4), and Clipart commercial strategy (M6–M7).
  */
 export type { GeneratorStrategy, GeneratorStrategyRegistry } from './generator-strategy.js';
 export { InMemoryGeneratorStrategyRegistry } from './in-memory-generator-strategy-registry.js';
@@ -10,5 +10,5 @@ export {
   parseClipartTemplate,
   toClipartTemplateParams,
   ClipartGeneratorStrategy,
-  buildClipartAssetBundle,
+  assembleClipartAssetBundle,
 } from './clipart/index.js';

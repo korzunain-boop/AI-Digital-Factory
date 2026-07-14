@@ -1,5 +1,5 @@
 /**
- * Clipart commercial generator (Milestone M6 skeleton).
+ * Clipart commercial generator (Milestones M6–M7).
  */
 export type { ClipartGeneratorTemplate } from './clipart-template.js';
 export {
@@ -7,4 +7,7 @@ export {
   parseClipartTemplate,
   toClipartTemplateParams,
 } from './clipart-template.js';
-export { ClipartGeneratorStrategy, buildClipartAssetBundle } from './clipart-generator-strategy.js';
+export {
+  ClipartGeneratorStrategy,
+  assembleClipartAssetBundle,
+} from './clipart-generator-strategy.js';
