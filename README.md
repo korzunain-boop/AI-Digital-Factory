@@ -8,14 +8,14 @@ Source of truth (repo root):
 
 ## Project Status
 
-| Field                          | Status                                                                        |
-| ------------------------------ | ----------------------------------------------------------------------------- |
-| **Current Milestone**          | M1 — Project Skeleton                                                         |
-| **Architecture Status**        | Approved (`SYSTEM.md`); skeleton only — not implemented beyond empty packages |
-| **Business Validation Status** | Not started (gate defined in `PROJECT.md`)                                    |
-| **Generator Status**           | Not implemented (First Commercial Generator = M6)                             |
-| **Research Status**            | External/manual planned; no provider code yet                                 |
-| **Publisher Status**           | Export-first planned; not implemented                                         |
+| Field                          | Status                                                                                 |
+| ------------------------------ | -------------------------------------------------------------------------------------- |
+| **Current Milestone**          | M2 — Architecture Baseline (contracts only)                                            |
+| **Architecture Status**        | Approved; Domain contracts frozen under `packages/domain` (interfaces + object shapes) |
+| **Business Validation Status** | Not started (gate defined in `PROJECT.md`)                                             |
+| **Generator Status**           | Strategy/Engine **interfaces only** — First Commercial Generator not implemented (M6)  |
+| **Research Status**            | `ResearchProvider` port only — no external/manual adapter implementation yet           |
+| **Publisher Status**           | `Publisher` port only — export mode not implemented yet                                |
 
 ## Prerequisites
 
@@ -48,11 +48,11 @@ npm run start -w @ai-product-factory/api
 ## Monorepo layout
 
 ```
-apps/api              REST API + composition root (empty in M1)
-apps/dashboard        Operator UI placeholder (empty in M1)
-packages/domain       Domain layer (empty folders reserved)
-packages/application  Application use cases (empty)
-packages/infrastructure Provider implementations (empty)
+apps/api              REST API + composition root (empty wiring in M1/M2)
+apps/dashboard        Operator UI placeholder (empty until M8)
+packages/domain       Domain contracts: objects, Engine, strategies, Assembler, QA, Publisher, providers
+packages/application  Application use cases (empty until later milestones)
+packages/infrastructure Provider implementations (empty until later milestones)
 packages/shared       Shared kernel (empty)
 tests/                Tests root (empty until tests exist)
 ```
