@@ -242,7 +242,8 @@ Engineering milestones derived from the approved roadmap. Each is independently 
 | M9 | **QA Stage** | ProductPackage → QAReport; gate export. |
 | M10 | **Export Publisher** | QA-passed package → PublishPackage (export mode); marketplace publish stub only. |
 | M11 | **End-to-End Job Path** | Full pipeline job with stage retries; ready for batch runs. |
-| M12 | **Commercial Validation Support** | Operational readiness for 20–50 runs + export (no analytics product). Business gate follows outside code. |
+
+Commercial Validation (batch listings, marketplace signals, pass/pivot) remains a **business gate** in [`PROJECT.md`](./PROJECT.md)—not an engineering milestone.
 
 **Post-validation (only if Commercial Validation passes):** later milestones for Analytics, Marketplace publish adapters, additional strategies, Research Agent provider—each still one session-sized slice.
 
