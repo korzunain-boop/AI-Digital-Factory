@@ -5,6 +5,7 @@ import type {
   GenerationResult,
 } from '../../objects/index.js';
 import type { StrategyKey } from '../../objects/ids.js';
+import type { GeneratedImages, ImageProvider } from '../../providers/image-provider.js';
 import type { GeneratorStrategy } from '../generator-strategy.js';
 import {
   CLIPART_STRATEGY_KEY,
@@ -13,26 +14,29 @@ import {
 } from './clipart-template.js';
 
 /**
- * First commercial GeneratorStrategy: Clipart (Milestone M6 skeleton).
+ * First commercial GeneratorStrategy: Clipart (M6 + M7).
  *
  * Responsibility:
- *   Accept GenerationRequest → apply ClipartGeneratorTemplate (theme, style, assetCount)
- *   → produce a realistic AssetBundle + GenerationResult.
+ *   Parse ClipartGeneratorTemplate → call ImageProvider.generateImages →
+ *   assemble AssetBundle → GenerationResult.
  *
- * M6 behavior:
- *   Deterministic fake assets (ids, filenames, metadata, tags, preview descriptors).
- *   No OpenAI, image APIs, or filesystem I/O.
- *   Locations use opaque `memory://…` URIs — future ImageProvider/StorageProvider
- *   can replace byte production without changing Engine or this strategy's contract.
+ * M7:
+ *   Does NOT build image assets itself. Image generation is delegated to ImageProvider
+ *   (FakeImageProvider for now; OpenAI/Flux later behind the same port).
  *
  * Engine integration:
- *   Registers under {@link CLIPART_STRATEGY_KEY}; DefaultGeneratorEngine needs no changes.
+ *   Registers under {@link CLIPART_STRATEGY_KEY}; DefaultGeneratorEngine unchanged.
  */
 export class ClipartGeneratorStrategy implements GeneratorStrategy {
   readonly key: StrategyKey = CLIPART_STRATEGY_KEY;
 
   /**
-   * Generate a clipart AssetBundle for the request.
+   * @param images ImageProvider used to produce GeneratedImages (required).
+   */
+  constructor(private readonly images: ImageProvider) {}
+
+  /**
+   * Generate a clipart AssetBundle via ImageProvider.
    */
   async generate(request: GenerationRequest): Promise<GenerationResult> {
     const parsed = parseClipartTemplate(request.template);
@@ -52,7 +56,28 @@ export class ClipartGeneratorStrategy implements GeneratorStrategy {
       assetCount: effectiveCount,
     };
 
-    const assetBundle = buildClipartAssetBundle(request, effectiveTemplate);
+    let generated: GeneratedImages;
+    try {
+      generated = await this.images.generateImages({
+        requestId: request.id,
+        count: effectiveTemplate.assetCount,
+        theme: effectiveTemplate.theme,
+        style: effectiveTemplate.style,
+        purpose: 'clipart',
+        width: 2048,
+        height: 2048,
+      });
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : 'ImageProvider failed';
+      return {
+        ok: false,
+        generationRequestId: request.id,
+        errors: [`IMAGE_PROVIDER_FAILED: ${message}`],
+        approximateCost: 0,
+      };
+    }
+
+    const assetBundle = assembleClipartAssetBundle(request, effectiveTemplate, generated);
 
     return {
       ok: true,
@@ -75,18 +100,33 @@ function resolveAssetCount(template: ClipartGeneratorTemplate, maxAssets?: numbe
 }
 
 /**
- * Build a deterministic AssetBundle shaped like future image-provider output.
+ * Map provider GeneratedImages into a Domain AssetBundle with clipart pack metadata.
+ * Does not invent pixels — only wraps provider descriptors + listing hints.
  */
-export function buildClipartAssetBundle(
+export function assembleClipartAssetBundle(
   request: GenerationRequest,
   template: ClipartGeneratorTemplate,
+  generated: GeneratedImages,
 ): AssetBundle {
-  const assets: AssetItem[] = [];
-  for (let i = 1; i <= template.assetCount; i += 1) {
-    assets.push(buildClipartAsset(request.id, template, i));
-  }
+  const assets: AssetItem[] = generated.images.map((image) => ({
+    name: image.name,
+    mediaType: image.mediaType,
+    location: image.location,
+    metadata: {
+      ...image.metadata,
+      assetId: image.assetId,
+      theme: template.theme,
+      style: template.style,
+    },
+  }));
 
-  const tags = buildTags(template);
+  const tags = [
+    'clipart',
+    'digital download',
+    slugify(template.theme),
+    slugify(template.style),
+    `${slugify(template.theme)} clipart`,
+  ];
 
   return {
     id: `clipart-bundle-${request.id}`,
@@ -97,57 +137,13 @@ export function buildClipartAssetBundle(
       strategyKey: CLIPART_STRATEGY_KEY,
       theme: template.theme,
       style: template.style,
-      assetCount: template.assetCount,
+      assetCount: assets.length,
       tags: tags.join(','),
       researchBriefId: request.researchBriefId,
       listingTitleHint: `${titleCase(template.theme)} ${titleCase(template.style)} Clipart Pack`,
     },
     createdAt: request.createdAt,
   };
-}
-
-function buildClipartAsset(
-  requestId: string,
-  template: ClipartGeneratorTemplate,
-  index: number,
-): AssetItem {
-  const padded = String(index).padStart(2, '0');
-  const slugTheme = slugify(template.theme);
-  const slugStyle = slugify(template.style);
-  const fileBase = `${slugTheme}-${slugStyle}-${padded}`;
-
-  return {
-    name: `${fileBase}.png`,
-    mediaType: 'image/png',
-    /**
-     * Opaque storage location — not a filesystem path.
-     * Future StorageProvider / ImageProvider write real bytes behind this URI scheme.
-     */
-    location: `memory://clipart/${requestId}/${fileBase}.png`,
-    metadata: {
-      index,
-      theme: template.theme,
-      style: template.style,
-      width: 2048,
-      height: 2048,
-      format: 'png',
-      transparentBackground: true,
-      tags: buildTags(template).join(','),
-      previewDescriptor: `preview:${fileBase}@512`,
-      promptDescriptor: `clipart/${slugStyle}/${slugTheme}#${padded}`,
-      assetId: `clipart-asset-${requestId}-${padded}`,
-    },
-  };
-}
-
-function buildTags(template: ClipartGeneratorTemplate): string[] {
-  return [
-    'clipart',
-    'digital download',
-    slugify(template.theme),
-    slugify(template.style),
-    `${slugify(template.theme)} clipart`,
-  ];
 }
 
 function slugify(value: string): string {
