@@ -1,0 +1,16 @@
+{
+  "name": "@ai-product-factory/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@ai-product-factory/application": "*",
+    "@ai-product-factory/domain": "*",
+    "@ai-product-factory/infrastructure": "*",
+    "@ai-product-factory/shared": "*"
+  }
+}

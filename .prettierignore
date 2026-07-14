@@ -1,0 +1,9 @@
+node_modules
+dist
+build
+coverage
+package-lock.json
+*.tsbuildinfo
+PROJECT.md
+DECISIONS.md
+SYSTEM.md
