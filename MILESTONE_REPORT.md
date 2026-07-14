@@ -7,13 +7,14 @@ Source of truth for product/architecture remains `PROJECT.md`, `DECISIONS.md`, a
 
 ## Summary
 
-| Milestone | Title                                                           | Status      |
-| --------- | --------------------------------------------------------------- | ----------- |
-| M1        | Project Skeleton                                                | Complete    |
-| M2        | Architecture Baseline (contracts)                               | Complete    |
-| M3        | Application Layer foundation                                    | Complete    |
-| M4        | Generator Engine                                                | Complete    |
-| M5+       | Provider ports / real adapters / First Commercial Generator / … | Not started |
+| Milestone | Title                                      | Status      |
+| --------- | ------------------------------------------ | ----------- |
+| M1        | Project Skeleton                           | Complete    |
+| M2        | Architecture Baseline (contracts)          | Complete    |
+| M3        | Application Layer foundation               | Complete    |
+| M4        | Generator Engine                           | Complete    |
+| M5        | Pipeline Execution                         | Complete    |
+| M6+       | First Commercial Generator / Assembler / … | Not started |
 
 ---
 
@@ -49,62 +50,106 @@ Plus application port `JobRepository` and thin commands. All `execute` methods t
 
 ---
 
-## M4 — Generator Engine (this milestone)
+## M4 — Generator Engine
+
+**Outcome:** `DefaultGeneratorEngine`, strategy registry injection, domain errors (`UNKNOWN_STRATEGY`, `STRATEGY_EXECUTION_FAILED`), `FakeGeneratorStrategy`, Engine unit tests.
+
+**Not included:** Real generators, providers, AI.
+
+---
+
+## M5 — Pipeline Execution
 
 **Date:** 2026-07-14
 
-### What was implemented
+### Implemented
 
-1. **`DefaultGeneratorEngine`**
-   - Accepts `GenerationRequest`
-   - Resolves `GeneratorStrategy` by `strategyKey`
-   - Executes strategy
-   - Returns `GenerationResult`
-   - Constructor-injected strategies (list or `GeneratorStrategyRegistry`)
-   - Product-agnostic (no category logic)
+- `PipelineExecutor` — runs Job through Research → Generator → Assembler → QA → Publisher
+- Stops on first stage **Failure**; marks later stages **Skipped**
+- Generator stage invokes existing `GeneratorEngine` (only executable stage)
+- Placeholder Domain-port implementations:
+  - `NotImplementedResearchProvider`
+  - `NotImplementedAssembler`
+  - `NotImplementedQA`
+  - `NotImplementedPublisher`
+- Stage result language: `Success` | `Failure` | `Skipped`
+- Ordered stage runners (array) — no product-type switches
+- Unit tests for order, Generator execution, single Engine call, stop-on-failure, skipped stages
 
-2. **`InMemoryGeneratorStrategyRegistry`**
-   - Maps strategy key → strategy
-   - Built from injected strategy list
+### Files Added
 
-3. **Domain errors**
-   - `DomainError`, `DomainErrorCodes`
-   - Unknown strategy → `GenerationFailure` with `UNKNOWN_STRATEGY` (not a generic throw)
-   - Strategy throws → `GenerationFailure` with `STRATEGY_EXECUTION_FAILED`
+| Path                                                                       | Purpose                                 |
+| -------------------------------------------------------------------------- | --------------------------------------- |
+| `packages/application/src/pipeline/pipeline-executor.ts`                   | Orchestrator                            |
+| `packages/application/src/pipeline/stage-result.ts`                        | Success/Failure/Skipped types           |
+| `packages/application/src/pipeline/pipeline-run-context.ts`                | Run context                             |
+| `packages/application/src/pipeline/pipeline-stage-runner.ts`               | Stage runner contract                   |
+| `packages/application/src/pipeline/job-stage-updates.ts`                   | Immutable Job stage helpers             |
+| `packages/application/src/pipeline/stages/generator-stage-runner.ts`       | Generator → Engine                      |
+| `packages/application/src/pipeline/stages/placeholder-stage-runners.ts`    | Research/Assembler/QA/Publisher runners |
+| `packages/application/src/pipeline/placeholders/not-implemented-stages.ts` | NotImplemented Domain ports             |
+| `packages/application/src/pipeline/index.ts`                               | Barrel exports                          |
+| `tests/application/pipeline-executor.test.ts`                              | M5 unit tests                           |
 
-4. **`FakeGeneratorStrategy`**
-   - Test-only minimal `GenerationSuccess`
-   - No AI, images, filesystem, or marketplace
+### Interfaces Added
 
-5. **Unit tests** (`tests/domain/generator-engine.test.ts`)
-   - Strategy registration
-   - Successful execution
-   - Unknown strategy
-   - Strategy exceptions
-   - Statelessness between executions
+| Name                                                             | Role                                                |
+| ---------------------------------------------------------------- | --------------------------------------------------- |
+| `StageResult` / `StageSuccess` / `StageFailure` / `StageSkipped` | Pipeline stage language                             |
+| `StageArtifactIds`                                               | Optional artifact ids from a stage                  |
+| `PipelineStageRunner`                                            | Stage runner contract                               |
+| `PipelineRunContext`                                             | Job + GenerationRequest (+ optional research input) |
 
-### What remains for M5
+_(Domain port interfaces reused; NotImplemented_ are implementations, not new Domain contracts.)*
 
-Per `SYSTEM.md`, M5 is **Provider Ports** with null/fake adapters:
+### Tests
 
-- Implement (or stub) Infrastructure adapters for `ResearchProvider`, `TextProvider`, `ImageProvider`, `StorageProvider`, `MarketplaceProvider`
-- Still **no** real commercial generator
-- Still **no** OpenAI/marketplace production integration required beyond fakes/nulls
+| Test                   | Asserts                                                     |
+| ---------------------- | ----------------------------------------------------------- |
+| Stage order            | Research → Generator → Assembler → QA → Publisher           |
+| Generator executes     | Generator stage succeeded; assetBundleId set via Engine     |
+| Engine once            | `FakeGeneratorStrategy.invocationCount === 1`               |
+| Stop on failure        | Assembler NotImplemented → Job failed; QA/Publisher skipped |
+| Generator failure skip | Strategy error fails Generator; later stages skipped        |
 
-### Possible future improvements (post-M4, not done now)
+Run: `npm test` (10 tests total with M4 Engine suite).
 
-- Optional Engine metrics/cost aggregation across strategies
-- Stronger typed error channel on `GenerationFailure` (structured code field) instead of `CODE: message` strings
-- Strategy middleware (timeouts/cancellation) without putting product logic in the Engine
-- Wire `DefaultGeneratorEngine` into Application `RunPipelineService` once stages are implemented
+### Known Limitations
 
-### Explicit non-goals of M4
+1. With production `NotImplementedResearchProvider`, pipeline fails at Research and never reaches Generator — tests inject a successful research stub only for M5 verification.
+2. Assembler/QA/Publisher runners pass minimal stub Domain objects into placeholder ports (which throw before using them).
+3. `RunPipelineService` (M3) still throws NotImplemented — not yet wired to `PipelineExecutor`.
+4. No persistence (`JobRepository`), API, filesystem export, AI, or marketplace.
+5. No real Research / Assembler / QA / Publisher behavior.
 
-- Real GeneratorStrategy (First Commercial Generator = M6)
-- Provider implementations
-- AI integrations
-- Assembler / QA / Publisher behavior
-- API endpoints
+### Next Milestone
+
+**M6 — First Commercial Generator** (per `SYSTEM.md` / product roadmap): implement the first real `GeneratorStrategy` after niche validation. Still no full Assembler/QA/Publisher unless scoped separately afterward.
+
+### Self-review (M5)
+
+**Strengths**
+
+- Clear Success/Failure/Skipped language aligned with Job stage statuses
+- Generator isolation via Engine keeps product types out of the orchestrator
+- DI-friendly placeholders replace independently
+
+**Weaknesses**
+
+- Research NotImplemented blocks end-to-end “happy” runs outside tests
+- Stub Domain objects in Assembler/QA/Publisher runners are awkward until real stages exist
+
+**Technical debt**
+
+- Wire `RunPipelineService` → `PipelineExecutor` + `JobRepository`
+- Replace stub assemble/validate/publish inputs with stored artifacts from prior stages
+- Consider structured stage error codes (not only strings)
+
+**Recommendations for M6**
+
+- Implement First Commercial Generator strategy only; keep PipelineExecutor unchanged
+- Register strategy in composition root; Engine already selects by key
+- Defer real Assembler until after Generator produces real assets worth packaging
 
 ---
 
