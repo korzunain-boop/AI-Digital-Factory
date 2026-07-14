@@ -8,10 +8,14 @@ import type { StrategyKey } from '../objects/ids.js';
  * Strategies produce assets only (via GenerationResult / AssetBundle) —
  * not ZIPs, listing folders, or marketplace payloads.
  *
- * Strategies may depend on Text/Image/Storage provider ports.
+ * Strategies may depend on Text/Image/Storage provider ports (later milestones).
  * Strategies must NOT call MarketplaceProvider.
  *
- * The First Commercial Generator is implemented in M6 — not here.
+ * The Engine resolves strategies by {@link GeneratorStrategy.key} only —
+ * it never imports concrete product generators.
+ *
+ * Production strategies arrive in M6+ (First Commercial Generator).
+ * For Engine tests, use {@link FakeGeneratorStrategy}.
  */
 export interface GeneratorStrategy {
   /** Registry key matched by GenerationRequest.strategyKey. */
@@ -26,7 +30,7 @@ export interface GeneratorStrategy {
 
 /**
  * Registry port used by the Engine to resolve strategies by key.
- * Composition root wires concrete strategies later — empty contract for M2.
+ * Default: {@link InMemoryGeneratorStrategyRegistry} built from constructor-injected strategies.
  */
 export interface GeneratorStrategyRegistry {
   /**
