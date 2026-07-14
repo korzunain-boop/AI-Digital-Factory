@@ -1,28 +1,5 @@
 import type { StorageLocation } from '../objects/ids.js';
-
-/**
- * Batch image generation request for {@link ImageProvider.generateImages}.
- * Product-agnostic — strategies supply theme/style/count; providers produce image descriptors.
- */
-export interface ImageGenerationRequest {
-  /** Correlates outputs to a GenerationRequest id. */
-  readonly requestId: string;
-
-  /** How many images to produce. */
-  readonly count: number;
-
-  /** Theme / niche hint for prompts or naming. */
-  readonly theme: string;
-
-  /** Visual style hint. */
-  readonly style: string;
-
-  /** Optional purpose tag (e.g. "clipart", "preview"). */
-  readonly purpose?: string;
-
-  readonly width?: number;
-  readonly height?: number;
-}
+import type { ImageGenerationPrompt } from '../prompts/image-generation-prompt.js';
 
 /**
  * One generated image descriptor (bytes live behind StorageLocation later).
@@ -43,18 +20,18 @@ export interface GeneratedImages {
 }
 
 /**
- * ImageProvider port (Milestone M7).
+ * ImageProvider port (M7 + M8).
  *
  * Responsibility ONLY:
- *   generateImages(request) → GeneratedImages
+ *   generateImages(prompt: ImageGenerationPrompt) → GeneratedImages
  *
- * No marketplace, filesystem, or SDK types in this contract.
- * FakeImageProvider supplies deterministic descriptors; a future OpenAI/Flux adapter
- * implements the same method without changing GeneratorEngine or strategy contracts.
+ * Never receives GenerationRequest — prompts come from PromptBuilder.
+ * FakeImageProvider supplies deterministic descriptors; OpenAI/Flux adapters later
+ * implement the same method using {@link ImageGenerationPrompt.prompts}.
  */
 export interface ImageProvider {
   /**
-   * Generate (or describe) a batch of images for the request.
+   * Generate (or describe) a batch of images from a structured prompt.
    */
-  generateImages(request: ImageGenerationRequest): Promise<GeneratedImages>;
+  generateImages(prompt: ImageGenerationPrompt): Promise<GeneratedImages>;
 }

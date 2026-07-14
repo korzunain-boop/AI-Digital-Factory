@@ -16,7 +16,8 @@ Source of truth for product/architecture remains `PROJECT.md`, `DECISIONS.md`, a
 | M5        | Pipeline Execution                    | Complete    |
 | M6        | First Commercial Generator (Clipart)  | Complete    |
 | M7        | Image Provider Abstraction            | Complete    |
-| M8+       | Assembler / Dashboard / QA / Export … | Not started |
+| M8        | Prompt Generation Layer               | Complete    |
+| M9+       | Assembler / Dashboard / QA / Export … | Not started |
 
 ---
 
@@ -292,7 +293,7 @@ Run: `npm test`.
 
 ### Next Milestone
 
-**M8** (product roadmap / dashboard) or **Assembler** per `SYSTEM.md` M7 historically — implement Packaging of AssetBundles. Real OpenAI ImageProvider is a later infrastructure swap, not a pipeline redesign.
+**M8 — Prompt Generation Layer** — complete (see below).
 
 ### Self-review (M7)
 
@@ -312,6 +313,91 @@ Run: `npm test`.
 - FakeImageProvider → real ImageProvider adapter (OpenAI etc.)
 - Optionally StorageProvider for durable locations instead of `memory://`
 - Assembler consumes AssetBundles into ProductPackages
+
+---
+
+## M8 — Prompt Generation Layer
+
+**Date:** 2026-07-14
+
+### Implemented
+
+- `PromptBuilder` — GenerationRequest + template → `ImageGenerationPrompt`
+- `DefaultPromptBuilder` — deterministic structured prompts (no LLM/HTTP)
+- `ClipartGeneratorStrategy` flow:
+  - GenerationRequest → PromptBuilder → ImageProvider → AssetBundle → GenerationResult
+- `ImageProvider.generateImages` now accepts **`ImageGenerationPrompt` only** (never GenerationRequest)
+- `FakeImageProvider` updated accordingly; stores `promptText` on asset metadata
+- Unit tests for prompt generation, determinism, Clipart→PromptBuilder→ImageProvider, Engine integration
+- GeneratorEngine unchanged
+
+### Files Added / Changed
+
+| Path                                                                   | Purpose                            |
+| ---------------------------------------------------------------------- | ---------------------------------- |
+| `packages/domain/src/prompts/image-generation-prompt.ts`               | `ImageGenerationPrompt`            |
+| `packages/domain/src/prompts/prompt-builder.ts`                        | `PromptBuilder` + input            |
+| `packages/domain/src/prompts/default-prompt-builder.ts`                | Deterministic DefaultPromptBuilder |
+| `packages/domain/src/prompts/index.ts`                                 | Barrel exports                     |
+| `packages/domain/src/providers/image-provider.ts`                      | Accepts ImageGenerationPrompt      |
+| `packages/domain/src/providers/fake-image-provider.ts`                 | Uses prompt (incl. prompts[])      |
+| `packages/domain/src/strategies/clipart/clipart-generator-strategy.ts` | Injects PromptBuilder              |
+| `tests/domain/clipart-generator-strategy.test.ts`                      | M8 coverage                        |
+
+### Interfaces Changed
+
+| Change                                 | Why                                          |
+| -------------------------------------- | -------------------------------------------- |
+| `ImageGenerationPrompt`                | Structured prompt contract for ImageProvider |
+| `PromptBuilder.build`                  | Owns prompt construction                     |
+| `ImageProvider.generateImages(prompt)` | No longer takes theme/style raw request DTO  |
+| Removed `ImageGenerationRequest`       | Replaced by ImageGenerationPrompt            |
+
+### Tests
+
+| Test                          | Asserts                                                             |
+| ----------------------------- | ------------------------------------------------------------------- |
+| Prompt generation             | theme/style/count/prompts/negativePrompt                            |
+| Deterministic prompts         | identical inputs → identical ImageGenerationPrompt                  |
+| Clipart uses PromptBuilder    | build called once before ImageProvider                              |
+| ImageProvider receives prompt | lastPrompt / spy has prompts[]; no GenerationRequest fields         |
+| Engine integration            | still works with Clipart + FakeImageProvider + DefaultPromptBuilder |
+
+Run: `npm test` (19 tests).
+
+### Known Limitations
+
+1. Prompts are template-string deterministic — no LLM rewrite or optimization.
+2. FakeImageProvider still does not call OpenAI/Flux.
+3. PromptBuilderInput is Clipart-template-shaped for MVP (other product types later).
+4. No Assembler / QA / Publisher / TextProvider / StorageProvider.
+
+### Next Milestone
+
+**Assembler** (or dashboard per SYSTEM numbering): package AssetBundles into ProductPackages. Real ImageProvider adapters consume `ImageGenerationPrompt.prompts` without changing PromptBuilder/Engine.
+
+### Self-review (M8)
+
+**Why PromptBuilder exists**
+
+- Separates “what to ask the model” from “how to call the model” and from “how to pack clipart SKUs”
+- Keeps ImageProvider free of GenerationRequest / product domain coupling
+- Makes prompts unit-testable and swappable (e.g. A/B builders later) without touching Engine
+
+**How OpenAI or Flux will use it**
+
+- Implement `ImageProvider.generateImages(prompt)`:
+  - map `prompt.prompts[i]` (+ negativePrompt, size) to API calls
+  - persist bytes via StorageProvider
+  - return `GeneratedImages` with real locations
+- Keep `DefaultPromptBuilder` (or a tuned builder) producing `ImageGenerationPrompt`
+- ClipartGeneratorStrategy and GeneratorEngine stay unchanged
+
+**Technical debt**
+
+- Generalize PromptBuilderInput beyond Clipart template fields when a second product type appears
+- Optionally add prompt versioning / catalog ids for marketplace audit
+- Wire PromptBuilder + FakeImageProvider (then real provider) in composition root
 
 ---
 

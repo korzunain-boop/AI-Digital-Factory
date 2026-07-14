@@ -11,10 +11,10 @@ Source of truth (repo root):
 
 | Field                          | Status                                                                 |
 | ------------------------------ | ---------------------------------------------------------------------- |
-| **Current Milestone**          | M7 — Image Provider abstraction (FakeImageProvider + Clipart wiring)   |
-| **Architecture Status**        | Approved; Engine + Pipeline + Clipart → ImageProvider                  |
+| **Current Milestone**          | M8 — Prompt Generation Layer (PromptBuilder → ImageProvider)           |
+| **Architecture Status**        | Approved; Clipart → PromptBuilder → ImageProvider → AssetBundle        |
 | **Business Validation Status** | Not started (gate defined in `PROJECT.md`)                             |
-| **Generator Status**           | Clipart via FakeImageProvider (deterministic; no AI APIs)              |
+| **Generator Status**           | Clipart + DefaultPromptBuilder + FakeImageProvider (no AI APIs)        |
 | **Research Status**            | NotImplemented placeholder (tests may stub success to reach Generator) |
 | **Publisher Status**           | NotImplemented placeholder — export not implemented yet                |
 
