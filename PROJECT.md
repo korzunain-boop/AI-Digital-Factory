@@ -1,7 +1,8 @@
 # AI Product Factory
 
 > Architecture & product brief. **No implementation yet.**  
-> This document is the single source of truth for vision, scope, and how we build with Cursor—one small milestone at a time.
+> Companion: [`DECISIONS.md`](./DECISIONS.md) — major architectural decisions, tradeoffs, and reconsideration triggers.  
+> Single source of truth for vision and scope. Build with Cursor—one small milestone at a time.
 
 ---
 
@@ -9,26 +10,28 @@
 
 **AI Product Factory** is a lean platform that turns marketplace demand signals into sellable digital products—fast.
 
-We do not optimize for “the smartest AI agents.” We optimize for **speed to revenue**: research a niche, generate a digital product pack, QA it, publish it to a marketplace, and learn what sells.
+We do not optimize for “the smartest AI agents.” We optimize for **speed to revenue**: take an external or manual research brief, generate assets, assemble a listing package, QA it, export (or later publish) it, and learn what sells.
 
-The factory is a pipeline:
+The factory pipeline:
 
 ```
-Research → Generator → QA → Publisher → Analytics
+Research → Generator → Assembler → QA → Publisher
 ```
 
-The **Generator Engine** is the heart of the system. Research, publishing, and analytics are swappable modules around it. The business goal for the first 1–3 months is simple: **produce and list profitable digital products** with minimal monthly cost and maximum learning loops.
+Analytics and marketplace automation are **post-MVP**.
+
+The **Generator Engine** is the heart of the system. Everything else—research providers, templates, assembler, QA, publisher modes—exists to feed it sellable briefs and ship its output. The business goal for the first 1–3 months: **produce and list profitable digital products** with minimal monthly cost and maximum learning loops.
 
 ---
 
 ## Goals
 
 1. **Validate ideas with real marketplace listings**, not demos or toy agents.
-2. **Ship an MVP** that can research (or ingest research), generate one product type, QA, and publish to at least one marketplace.
+2. **Ship a thinner MVP**: one generator → assemblable listing package → export → manual upload → operator dashboard for jobs only.
 3. **Keep monthly infra/API costs low** enough that early revenue can cover operations.
-4. **Use modular adapters** so marketplaces and research providers can be swapped without rewriting the core.
-5. **Make generators independently addable** via Strategy Pattern (Clipart, Coloring Books, Planners, etc.).
-6. **Expose an operator dashboard** (modern AI SaaS feel) for products, queue, revenue, jobs, and analytics.
+4. **Keep Research and Publisher as interfaces** so providers/modes swap without rewriting the Generator Engine.
+5. **Make future generators addable** via Strategy Pattern + reusable Generator Templates (data-driven where possible).
+6. **Operator dashboard for operations** (products, queue, jobs, history)—not analytics theater.
 7. **Develop in tiny Cursor-friendly milestones**—never generate the whole app in one pass.
 8. **Optimize for money in 1–3 months**, not architectural purity.
 
@@ -36,18 +39,21 @@ The **Generator Engine** is the heart of the system. Research, publishing, and a
 
 ## Non Goals
 
-Explicitly **out of scope** for the early phases:
+Explicitly **out of scope** for MVP and early phases:
 
-- Building the most capable/general multi-agent system.
+- Building an own **AI Research Agent** (future provider only, after validation—see roadmap).
+- Marketplace **publishing automation** in MVP (export package first).
+- Revenue / marketplace analytics dashboards in MVP.
+- Multiple generator strategies in MVP (interfaces only beyond the one chosen).
 - Supporting all marketplaces on day one.
-- Replacing EverBee (or similar) with a custom Research Agent before revenue.
+- The most capable/general multi-agent system.
 - Perfect ML/eval frameworks, heavy MLOps, or GPU clusters.
-- Mobile apps, public multi-tenant SaaS for strangers, or marketplaces of our own.
+- Mobile apps, public multi-tenant SaaS, or our own marketplace.
 - Real-time collaboration, complex RBAC, or enterprise SSO.
 - Full creative-suite replacement (Canva/Photoshop).
-- Legal advice automation, tax filing, or full accounting.
-- Pixel-perfect design systems beyond a clean dashboard MVP.
-- Auto-optimizing ads, influencer engines, or social media managers.
+- Legal/tax/accounting automation.
+- Pixel-perfect design systems beyond a usable operational dashboard.
+- Auto ads, influencer engines, or social managers.
 
 ---
 
@@ -57,103 +63,161 @@ Explicitly **out of scope** for the early phases:
 
 A single operator can:
 
-1. Provide or pull **research input** (manual ideas and/or one external research source).
-2. Run **one generator** (e.g. Clipart or Coloring Book) to produce a marketplace-ready digital product pack.
-3. Run **lightweight QA** (file presence, format checks, basic content sanity).
-4. **Publish** (or prepare a publish package) to **one marketplace** (likely Etsy or Gumroad first).
-5. See **status in a dashboard**: queue, running jobs, products, generation history, and basic revenue/stats placeholders.
+1. Ingest **research** from **manual ideas, CSV, or external tools (e.g. EverBee)**—no own Research Agent.
+2. Run **one generator strategy only: Clipart Generator** (see rationale below).
+3. Run **Assembler** to package assets into a **listing export package** (ZIP, previews, metadata).
+4. Run **lightweight QA** on the **finished package**.
+5. Use **Publisher in Export mode** to produce an upload-ready folder/ZIP (manual marketplace upload).
+6. Operate from a **minimal dashboard**: products, queue, running jobs, generation history, job status.
 
-MVP success = **products listed and measurable interest/sales**, not codebase completeness.
+MVP success = **listing packages uploaded and measurable interest/sales**, not codebase completeness.
+
+### Why Clipart Generator (only MVP strategy)
+
+| Criterion | Why Clipart wins for 1–3 months |
+|-----------|----------------------------------|
+| Demand | Digital clipart / illustration packs are a proven high-volume digital category on marketplaces (esp. Etsy-style SEO niches). |
+| Speed | Assets are independent images; iterate niches without multi-page layout logic. |
+| Cost | Fewer “layout failures”; pay mainly for image generation, not PDF redesign loops. |
+| Assembler fit | ZIP + preview collage + metadata is enough to list; PDF is optional later. |
+| Validation | Many niche/theme variants from the same templates → faster A/B of niches. |
+| Complexity | Lower than Coloring Books (PDF/print constraints), Planners (calendar logic), Games (rules/UX). |
+
+**Everything else** (Coloring Book, Planner, Printable Game, Flashcard) remains **interfaces / future strategies only**.
 
 ### MVP technical shape
 
 | Area | MVP choice |
 |------|------------|
-| Research | Adapter interface + 1–2 sources (manual CSV/ideas + optional EverBee-like export/API) |
-| Generator | Generator Engine + **one** Strategy (recommend Clipart or Coloring Book—highest digital-product velocity) |
-| QA | Rule-based checks; optional cheap LLM spot-check later |
-| Publisher | **One** marketplace adapter |
-| Analytics | Manual or import (CSV / marketplace export); simple dashboard widgets |
-| Hosting | Cheap single app + DB (or serverless) — preference for low fixed cost |
+| Research | Interface + **external/manual default**: manual ideas, CSV import, optional EverBee (or similar) import. **No AI Research Agent.** |
+| Generator Engine | Heart of system; registry; **one** strategy: Clipart |
+| Generator Templates | Minimal template layer for Clipart (e.g. theme + style + pack size)—data-driven knobs, not a full CMS |
+| Assembler | ZIP, preview images, metadata package; PDF only if a listing truly needs it |
+| QA | Rule-based on **assembled** output |
+| Publisher | **Export listing package mode only** |
+| Dashboard | Operations only (see FR-7) |
+| Analytics | **Not MVP** — spreadsheet / marketplace UI is fine |
+| Hosting | Cheapest workable single app + DB |
 | Auth | Single operator / simple login |
-| Cursor work | Sequence of small milestones (see Roadmap) |
 
 ### What MVP deliberately skips
 
-- Multi-marketplace publishing matrix  
-- Custom AI Research Agent  
-- Advanced A/B product variants  
-- Full finance/P&L automation  
-- Multi-tenant SaaS packaging  
+- Marketplace API publishing automation  
+- Revenue / marketplace analytics UI  
+- Second generator strategy  
+- Own AI Research Agent  
+- Multi-marketplace matrix  
+- Fancy SaaS marketing shell  
 
 ---
 
 ## Future Roadmap
 
-Phased so each step can be a Cursor milestone series. Do not implement future phases until the previous phase proves value.
+Reorganized around **business value**. Do not implement a later phase until the previous one unblocks revenue or reduces operator pain that blocks revenue.
 
-### Phase 0 — Project foundation (docs & skeleton only)
+```
+Foundation
+    ↓
+Generator Engine
+    ↓
+One Generator (Clipart)
+    ↓
+Assembler
+    ↓
+Minimal Dashboard
+    ↓
+QA
+    ↓
+Export Publisher
+    ↓
+Analytics
+    ↓
+Marketplace automation
+    ↓
+More generators / templates
+    ↓
+Research Agent   ← among the LAST phases
+```
 
-- This `PROJECT.md`
-- Later: repo layout, env conventions, milestone checklist (separate docs when coding starts)
+### Phase 0 — Foundation
 
-### Phase 1 — Vertical slice (money path)
+- `PROJECT.md`, `DECISIONS.md`
+- Later: repo layout, env conventions, milestone checklist (when coding starts)
 
-- Generator Engine interface + **one** generator strategy  
-- Minimal product model (title, tags, files, status, marketplace ids)  
-- Manual or semi-manual research ingest  
-- Basic QA  
-- One publisher adapter (draft listing or full publish)  
-- Bare dashboard: products + job status  
+**Exit:** docs approved; coding starts as separate Cursor tasks.
 
-**Exit criteria:** one real listing live or ready-to-upload pack with traceable generation history.
+### Phase 1 — Generator Engine
 
-### Phase 2 — Queue, jobs, and operator UX
+- Core engine interface, registry, job handoff contracts
+- No need for every future strategy—just the seam that Clipart plugs into
 
-- Job queue for Research → Generate → QA → Publish  
-- Dashboard: queue, running jobs, generation history  
-- Failure retries and clear error surfaces  
-- Cost meters (API spend rough estimates)  
+**Exit:** Engine can invoke a registered strategy and return raw assets.
 
-**Exit criteria:** operator runs multiple products through the pipeline without babysitting each step.
+### Phase 2 — One Generator (Clipart)
 
-### Phase 3 — Research modularity + second generator
+- Clipart Strategy + thin Generator Template config (theme/style/count)
+- Raw assets only—no packaging here
 
-- Formal Research Provider adapter (EverBee / custom import / own ideas)  
-- Swap provider without changing Generator/Publisher  
-- Second generator strategy (e.g. Planner or Flashcard)  
-- Shared asset packaging conventions  
+**Exit:** repeatable clipart asset sets from a Research Brief + template params.
 
-**Exit criteria:** two product types; research source swappable.
+### Phase 3 — Assembler
 
-### Phase 4 — Multi-marketplace adapters
+- Package files, ZIP, preview images, metadata package
+- PDF only if required for the chosen listing format
 
-- Adapter interface stable  
-- Additional marketplaces: Etsy, Gumroad, Creative Market, Shopify, Ko-fi (as demand justifies)  
-- Per-marketplace listing field mappers and asset constraints  
+**Exit:** folder/ZIP that a human can upload as a digital product.
 
-**Exit criteria:** same product can be published (or packaged) for 2+ marketplaces.
+### Phase 4 — Minimal Dashboard
 
-### Phase 5 — Analytics & optimization loop
+- Products, Queue, Running Jobs, Generation History, Job Status
+- Start / retry jobs; show failures clearly
+- **No** revenue charts, marketplace analytics, or advanced charts
 
-- Revenue ingest from marketplace exports/APIs  
-- Dashboard: revenue, marketplace statistics, conversion proxies  
-- Feedback into research (what niches convert)  
+**Exit:** operator runs the factory from UI without CLI archaeology.
 
-**Exit criteria:** decisions on “what to generate next” driven by dashboard data.
+### Phase 5 — QA
 
-### Phase 6 — Own Research Agent (optional replace)
+- Validate **finished** packages (Assembler output)
+- Hard fail vs warn; persist reports
 
-- AI Research Agent as another Research Provider  
-- Same interfaces as Phase 3; no rewrites of Generator Engine / Publisher  
-- Only if external research cost or quality becomes the bottleneck  
+**Exit:** bad packages blocked from export; good ones marked ready.
 
-### Phase 7 — Scale & productize (post-revenue)
+### Phase 6 — Export Publisher
 
-- More generators (Printable Games, etc.)  
-- Stronger QA / branding templates  
-- Multi-user / limited SaaS if it serves the business  
-- Cost optimization and caching of generation  
+- Publisher **Export mode**: listing package ready for manual upload
+- Marketplace Publishing mode: **interface stub only**
+
+**Exit:** one-click (or one-command) export of QA-passed products.
+
+### Phase 7 — Analytics
+
+- Revenue ingest (CSV / marketplace export)
+- Dashboard: revenue, marketplace statistics
+- Inform next Research Briefs manually
+
+**Exit:** “what to generate next” guided by numbers, not vibes alone.
+
+### Phase 8 — Marketplace automation
+
+- Publisher **Publish mode** for one marketplace when APIs/ToS allow
+- Then expand adapters: Etsy, Gumroad, Creative Market, Shopify, Ko-fi—as demand justifies
+
+**Exit:** optional automated listing for validated channels; export mode remains forever as fallback.
+
+### Phase 9 — Expansion generators & deeper templates
+
+- Second strategy (e.g. Coloring Book) if Clipart unit economics work
+- Richer template composition (AnimalTemplate → OceanTheme → AgeBand-style stacks where relevant)
+
+**Exit:** new product types without rewriting Engine / Assembler / Publisher contracts.
+
+### Phase 10 — Research Agent (LATE)
+
+- Own AI Research Agent as **another Research Provider**
+- Same Research Brief contract as EverBee / CSV / manual
+- Only after revenue and when external research throughput/cost is the real bottleneck
+
+**Exit:** research provider swapped without touching Generator Engine, Assembler, QA, or Publisher.
 
 ---
 
@@ -161,68 +225,94 @@ Phased so each step can be a Cursor milestone series. Do not implement future ph
 
 ### FR-1 Research
 
-- Accept **manual ideas** (titles, niches, keywords, competitor notes).
-- Optionally ingest from an **external research service** (e.g. EverBee) via adapter.
-- Output a normalized **Research Brief** consumed by Generator Engine (niche, keywords, constraints, suggested product type).
-- Research providers must be replaceable without changing generators or publishers.
+- **Default workflow:** external research and human input—EverBee (or similar), manual ideas, CSV import.
+- Produce a normalized **Research Brief** for the Generator Engine.
+- Interchangeable **Research Provider** interface.
+- **Do not** plan or staff an own AI Research Agent in early phases. It is a **late** optional provider after business validation (Phase 10).
+- Manual ingest path must always work even if paid research tools are cancelled.
 
 ### FR-2 Generator Engine (core)
 
-- Host multiple **independent generators** selected via Strategy Pattern.
-- Each generator produces a **Product Artifact**: files, metadata (title, description, tags), and packaging hints.
-- Initial target generators (not all in MVP):
-  - Clipart Generator  
-  - Coloring Book Generator  
-  - Planner Generator  
-  - Printable Game Generator  
-  - Flashcard Generator  
-- Adding a generator = implement strategy + register it; no changes to pipeline orchestration beyond config.
+- Heart of the project. Strategies register here.
+- MVP: **Clipart Generator** only.
+- Future strategies (interfaces only for now): Coloring Book, Planner, Printable Game, Flashcard.
+- **Generators produce assets only**—not ZIPs, listing folders, or final PDFs.
+- Output: raw **Asset Bundle** consumed by Assembler.
 
-### FR-3 QA
+### FR-2b Generator Templates
 
-- Validate required files exist and match marketplace constraints (format, size, count).
-- Validate metadata completeness (title length, tags, description placeholders).
-- Block publish on hard failures; warn on soft issues.
-- Persist QA reports linked to generation jobs.
+- Generators compose **reusable, data-driven templates** instead of hardcoding every niche.
+- Conceptual stack example (future Coloring Book; Clipart uses a flatter variant early):
 
-### FR-4 Publisher
+  ```
+  ColoringBookGenerator
+      → AnimalTemplate
+          → OceanTheme
+              → Age 5–7
+                  → Generated Product
+  ```
 
-- Marketplace **adapters** with a shared publish interface.
-- Target adapters (future): Etsy, Gumroad, Creative Market, Shopify, Ko-fi.
-- MVP: one adapter (full publish or “prepare listing package” if API limits block automation).
-- Store external listing IDs and publish status.
+- MVP: enough template parameters for Clipart niche packs (theme, style, asset count, naming patterns). Avoid building a full template CMS before first sales.
 
-### FR-5 Analytics
+### FR-3 Assembler
 
-- Track generation history, job outcomes, and product statuses.
-- Ingest or enter **revenue** and basic marketplace stats.
-- Surface which product types / niches perform.
-- Later: feed insights back to Research (recommendation lists, not autonomous sprawl).
+- Sits between Generator and QA.
+- Responsibilities:
+  - Package files
+  - Create ZIP
+  - Create preview images
+  - Generate metadata package (title, tags, description drafts, file manifest)
+  - Generate PDFs **if required**
+- Input: Asset Bundle (+ brief/template metadata). Output: **Product Package**.
 
-### FR-6 Pipeline / Jobs
+### FR-4 QA
 
-- Orchestrate: Research → Generator → QA → Publisher → Analytics.
-- Support queued and running jobs with states: `pending`, `running`, `succeeded`, `failed`, `cancelled`.
-- Allow re-run from a failed stage without always regenerating from scratch.
+- Validates **finished Product Packages** (post-Assembler), not raw generator scraps.
+- File presence, formats, sizes, counts, metadata completeness.
+- Block export on hard failures; warn on soft issues.
+- Persist QA reports linked to jobs.
 
-### FR-7 Dashboard (modern AI SaaS)
+### FR-5 Publisher
 
-Must display:
+- Two modes behind one module:
+  1. **Export listing package** — MVP; default.
+  2. **Marketplace publishing** — Phase 8+; interface early, implement later.
+- Future marketplace adapters: Etsy, Gumroad, Creative Market, Shopify, Ko-fi.
+- Never assume API automation will unblock MVP.
+
+### FR-6 Analytics (post-MVP)
+
+- Generation history / job outcomes are operational (MVP via dashboard history).
+- Revenue and marketplace statistics: **Phase 7**, not MVP.
+- Later: feed insights into the next human Research Brief.
+
+### FR-7 Pipeline / Jobs
+
+```
+Research → Generator → Assembler → QA → Publisher
+```
+
+- Job states: `pending`, `running`, `succeeded`, `failed`, `cancelled`.
+- Allow re-run from a failed stage (e.g. re-Assemble without regenerating assets when possible).
+
+### FR-8 Dashboard (MVP = operations)
+
+**MVP must show:**
 
 - Products  
 - Queue  
-- Revenue  
-- Generation history  
-- Running jobs  
-- Marketplace statistics  
-- Analytics  
+- Running Jobs  
+- Generation History  
+- Job Status  
 
-Operator-friendly: clear statuses, cost/revenue at a glance, start or retry jobs without CLI.
+**Not MVP:** revenue analytics, marketplace analytics, advanced charts. Those move to Phase 7.
 
-### FR-8 Modularity for Cursor
+Operator-friendly: clear statuses, start/retry without CLI. Modern AI SaaS look is fine for later polish; MVP prioritizes operability.
 
-- Clear module boundaries documented so Cursor tasks touch one module per milestone.
-- Interface-first design for Research, Generators, QA, Publishers.
+### FR-9 Modularity for Cursor
+
+- One module per milestone where possible.
+- Interface-first: Research, Generator strategies/templates, Assembler, QA, Publisher modes.
 
 ---
 
@@ -230,56 +320,35 @@ Operator-friendly: clear statuses, cost/revenue at a glance, start or retry jobs
 
 | ID | Requirement |
 |----|-------------|
-| NFR-1 | **Low monthly cost** — prefer managed free/cheap tiers; avoid always-on GPU; cache generation assets when useful |
-| NFR-2 | **MVP first** — ship vertical slices; reject speculative abstractions that don’t unblock revenue |
-| NFR-3 | **Modular** — adapters and strategies; swap Research or Marketplace without core rewrite |
-| NFR-4 | **Easy expansion** — new generator or marketplace in a bounded PR, not a rewrite |
-| NFR-5 | **Operator reliability** — failed jobs are visible, retryable, and don’t silently drop products |
-| NFR-6 | **Observability light** — logs + job status enough for one operator; no heavy APM required initially |
-| NFR-7 | **Security basics** — secrets in env; marketplace tokens never committed; least privilege on APIs |
-| NFR-8 | **Cursor-friendly structure** — small modules, explicit interfaces, milestone-sized tasks |
-| NFR-9 | **Time-to-money** — architecture choices favor shipping listings in days/weeks of effort, not perfect systems |
-| NFR-10 | **Maintainability** — boring, readable code over clever frameworks when coding starts |
+| NFR-1 | **Low monthly cost** — cheap host; no always-on GPU; external research tools only as needed |
+| NFR-2 | **MVP first** — one generator, export publisher, ops dashboard |
+| NFR-3 | **Modular** — swap Research provider or Publisher mode without rewriting Generator Engine |
+| NFR-4 | **Easy expansion** — new generator = strategy + templates; Assembler/QA/Publisher unchanged where possible |
+| NFR-5 | **Operator reliability** — visible, retryable failures |
+| NFR-6 | **Light observability** — logs + job status; no heavy APM initially |
+| NFR-7 | **Secrets hygiene** — tokens in env; never committed |
+| NFR-8 | **Cursor-friendly** — milestone-sized tasks |
+| NFR-9 | **Time-to-money** — listing package in operator hands ASAP |
+| NFR-10 | **Boring over clever** — revenue-facing simplicity wins |
 
 ---
 
 ## Architectural Principles
 
-1. **Money over elegance**  
-   Choose the option that gets a sellable SKU live sooner, if quality remains marketplace-acceptable.
-
-2. **Business validation before automation**  
-   Prove a niche/product type sells (or gets favorites/views) before investing in autonomous loops for it.
-
-3. **MVP first, adapters early**  
-   Build the thinnest real pipeline, but put **interfaces** around Research and Marketplaces from the start so replacements are cheap.
-
-4. **Generator Engine is the heart**  
-   All product types plug in as strategies. Pipeline stages speak to Engine and Artifacts, not to one-off scripts forever.
-
-5. **Strategy Pattern for generators**  
-   `GeneratorStrategy` (name TBD in code) → `generate(brief) → ProductArtifact`. Registry selects by product type.
-
-6. **Adapter Pattern for marketplaces & research**  
-   `ResearchProvider` and `MarketplacePublisher` implement swap-in providers (EverBee → own Research Agent; Etsy → Gumroad, etc.).
-
-7. **Pipeline is a queue of stages, not a monolith**  
-   Each stage is independently retryable and testable.
-
-8. **Thin dashboard, fat clarity**  
-   Dashboard reflects operational truth; it is not a second product. Prefer one composition of status + actions.
-
-9. **Cost is a feature**  
-   Track approximate API spend per job; kill expensive paths that don’t convert.
-
-10. **Cursor never builds the whole app at once**  
-    Work is split into milestones that each produce a reviewable increment (interface → one strategy → one adapter → dashboard panel).
-
-11. **Replace internals, keep contracts**  
-    Own Research Agent later must implement the same Research Brief contract.
-
-12. **De-risk legal/marketplace ToS early**  
-    Prefer compliant listing practices; store provenance of generated content for disputes.
+1. **Money over elegance** — ship sellable packages sooner.
+2. **Business validation before automation** — listings and sales before Research Agent or publish APIs.
+3. **Generator Engine is the heart** — all product types and templates orbit the Engine.
+4. **Generators make assets; Assembler makes products** — hard boundary.
+5. **QA validates finished products** — after Assembler.
+6. **Strategy + Templates** — strategies for product types; templates for niche/theme data.
+7. **Research is interchangeable; default is external/manual** — own AI Research is late.
+8. **Publisher: export first, automate later** — APIs are a luxury.
+9. **Dashboard is an operations console in MVP** — analytics wait.
+10. **Pipeline stages are independently retryable.**
+11. **Cost is a feature** — rough cost per job when practical; kill expensive non-converting paths.
+12. **Cursor never builds the whole app at once.**
+13. **Replace internals, keep contracts** — especially Research Brief and Product Package shapes.
+14. **Marketplace ToS / IP risk is a product constraint** — not an afterthought.
 
 ---
 
@@ -289,22 +358,22 @@ Operator-friendly: clear statuses, cost/revenue at a glance, start or retry jobs
 
 | Metric | Target guidance |
 |--------|-----------------|
-| Sellable products listed | First listing ASAP; then a steady weekly cadence |
-| Marketplace engagement | Favorites/views/clicks rising on at least one niche |
-| Revenue | Non-zero sales; then trend toward covering monthly platform + API costs |
-| Time per product | Operator time from brief → listing package shrinks each week |
-| Cost per product | Fully loaded generation cost well below expected ASP (average selling price) |
+| Export packages created | First upload-ready clipart pack ASAP |
+| Listings live (manual upload OK) | Steady weekly cadence after first |
+| Marketplace engagement | Favorites/views on at least one niche |
+| Revenue | Non-zero; then covers platform + generation cost |
+| Operator time brief → upload | Shrinks each week |
+| Cost per pack | Well below expected ASP × realistic conversion |
 
-### Product / system — secondary
+### System — secondary
 
 | Metric | Guidance |
 |--------|----------|
-| Pipeline success rate | Majority of jobs reach QA pass without manual file surgery |
-| Retry clarity | Failed jobs have actionable errors |
-| Module swap cost | New generator or marketplace adapter is a small, isolated change |
-| Dashboard usefulness | Operator runs day-to-day from UI, not scattered scripts |
+| Assemble+QA pass rate | Most packages need no hand surgery |
+| Retry clarity | Failures are actionable |
+| Adding a second generator later | Does not rewrite Assembler/Publisher |
 
-**North star:** profitable digital products shipped and improved via analytics—not agent sophistication scores.
+**North star:** profitable packages shipped. Not agent sophistication. Not dashboard vanity charts.
 
 ---
 
@@ -312,16 +381,16 @@ Operator-friendly: clear statuses, cost/revenue at a glance, start or retry jobs
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Generating products nobody wants | High | Business validation first; start from real marketplace research; kill niches early |
-| Marketplace ToS / API limits | High | Adapter supports “export package” fallback; stay compliant; don’t scrape aggressively |
-| AI content quality rejects | Medium–High | Generator-specific templates + QA gates; human spot-check early |
-| API/generation costs exceed revenue | High | Cost meters; cheap models for drafts; cache; batch; one generator until ROI |
-| Overbuilding agents/platform | High | Non-goals enforced; milestones gated on revenue/learning |
-| EverBee / external research dependency | Medium | Research adapter; keep manual ingest path always available |
-| Multi-marketplace complexity too early | Medium | One marketplace until revenue; then adapters |
-| Legal (copyright, trademarks in niches) | High | Niche guidelines; avoid branded IP; keep generation prompts constrained |
-| Operator bottleneck | Medium | Queue + retries; automate packaging before perfect publish APIs |
-| Cursor / AI-coding sprawl | Medium | Small milestones, this doc as guardrail, one module per task |
+| Products nobody wants | High | External research + kill niches early; don’t scale generation for hobbies |
+| Overbuilding before first sale | High | Hard MVP cuts (one generator, export-only, ops dashboard) |
+| Clipart quality / sameness | High | Templates + human spot-check; tight niche briefs |
+| API/generation cost > revenue | High | Small packs; cheap models; stop losers |
+| Marketplace API illusion | Medium | Export mode is the real MVP path |
+| Template system overbuilt | Medium | MVP: flat Clipart params; deep composition later |
+| Assembler as mini-Canva | Medium | Only ZIP/preview/metadata/PDF-as-needed |
+| EverBee/tool dependency | Medium | Always keep CSV/manual provider |
+| Legal / trademark niches | High | Ban brand IP; document provenance |
+| Cursor scope sprawl | Medium | Milestones + this doc + DECISIONS.md |
 
 ---
 
@@ -330,58 +399,101 @@ Operator-friendly: clear statuses, cost/revenue at a glance, start or retry jobs
 ### Principle
 
 **Do not automate what you have not validated.**  
-Validation means marketplace evidence (search demand, competition quality, listings, early sales)—not internal demo confidence.
+Validation = marketplace evidence (demand, competition, listings, early sales)—not a working agent demo.
 
-### Loop
+### Default research workflow
 
-1. **Hypothesis** — niche + product type + price point (e.g. “watercolor clipart packs for wedding planners on Etsy”).
-2. **Research** — EverBee / own notes / keyword tools → Research Brief.  
-3. **Minimum viable listing** — generate smallest acceptable pack; publish or soft-launch.  
-4. **Measure** — views, favorites, conversion, revenue; cost per listing.  
-5. **Decide** — scale generator for winners, tweak, or kill.  
-6. **Only then** — deepen automation (more generators, own Research Agent, multi-marketplace).
+1. Operator uses **EverBee / keyword tools / own ideas / CSV**.  
+2. Brief enters the factory.  
+3. Clipart Generator → Assembler → QA → **Export**.  
+4. Human uploads listing.  
+5. Measure outside the app (marketplace UI / sheet) until Phase 7 Analytics.  
+6. Scale winners; kill losers.  
+7. **Only much later:** Research Agent and marketplace publish automation.
 
-### Validation gates (before heavy investment)
+### Validation gates
 
 | Gate | Question | Fail action |
 |------|----------|-------------|
-| Niche gate | Is there proven demand and workable competition? | Don’t generate at scale |
-| Product-type gate | Does one generator strategy produce acceptable files? | Fix templates/QA before queueing 50 jobs |
-| Channel gate | Can we list on at least one channel reliably? | Ship manual upload package first |
-| Unit economics gate | Is cost per product << expected revenue * conversion? | Change model/provider or niche |
-| Automation gate | Does the niche sell enough to justify a new adapter/agent? | Keep manual steps |
-
-### Research modularity in validation
-
-- Phase 1–2: external research + human judgment is fine.  
-- Phase 6: own AI Research Agent only when the bottleneck is research throughput/cost—not because agents are cool.
-
-### Dashboard role in validation
-
-The SaaS-style dashboard exists to make the loop visible: what was generated, what is queued, what earned money, what wasted spend. **Analytics drive the next Research Brief**, closing the factory loop.
+| Niche gate | Proven demand / workable competition? | Don’t batch-generate |
+| Clipart quality gate | Pack looks sellable after Assembler? | Fix templates before queueing dozens |
+| Channel gate | Manual upload path works? | Stay on export; don’t chase APIs |
+| Unit economics | Cost per pack << realistic expected return? | Shrink pack or change niche/model |
+| Automation gate | Does volume justify publish API or Research Agent? | Keep export + external research |
 
 ---
 
 ## Cursor Development Doctrine
 
-> Enforced process for when implementation begins. Still no code in this phase.
+1. One milestone = one narrow outcome.  
+2. **Never** generate the entire application in one Cursor pass.  
+3. Suggested coding order (when coding starts)—aligned to roadmap:
 
-1. **One milestone = one narrow outcome** (e.g. “define Research Brief type + manual provider,” not “build platform”).
-2. **Never ask Cursor to generate the entire application.**
-3. Prefer: interfaces → one implementation → tests/smoke → dashboard panel → next adapter.
-4. Each PR/milestone should be reviewable in isolation.
-5. Keep `PROJECT.md` updated when vision or scope changes; do not let code invent new product goals silently.
-6. Suggested first coding milestones (for later, not now):
-   1. Repo skeleton + env + `README` pointing here  
-   2. Domain models: Research Brief, Product Artifact, Job  
-   3. Generator Engine interface + one strategy (offline/stub ok)  
-   4. QA rules for that strategy  
-   5. One publisher adapter (or zip pack export)  
-   6. Job runner + queue  
-   7. Dashboard shell: products / jobs / history  
-   8. Revenue & stats widgets (even if fed by CSV)  
-   9. Second generator  
-   10. Second marketplace adapter  
+   1. Foundation / skeleton  
+   2. Generator Engine interface  
+   3. Clipart strategy + minimal templates  
+   4. Assembler (ZIP, previews, metadata)  
+   5. Minimal ops dashboard  
+   6. QA on packages  
+   7. Export Publisher  
+   8. Analytics (later)  
+   9. Marketplace publish mode (later)  
+   10. More generators (later)  
+   11. Research Agent provider (last)  
+
+4. Keep `PROJECT.md` and `DECISIONS.md` updated when decisions change.
+
+---
+
+## Critical Review (hostile pass)
+
+This section intentionally challenges the architecture. Goal: raise P(revenue in 1–3 months), not protect elegance.
+
+### Biggest risks
+
+1. **Building a “platform” when a script + spreadsheet might sell first.** Interfaces, registry, dashboard, and job state machines can burn weeks before a single Etsy upload.  
+2. **Clipart is competitive and taste-sensitive.** “Proven category” ≠ “we will win.” AI clipart can look generic; buyers may prefer premium human packs.  
+3. **External research quality still depends on the human.** EverBee + CSV does not remove niche selection skill; the factory can accelerate producing junk.  
+4. **Assembler scope creep.** Preview generation and “metadata package” can become a design tool. That delay kills the export timeline.  
+5. **Pipeline ceremony.** Five stages (Research → Generator → Assembler → QA → Publisher) may be more moving parts than needed for one operator shipping ZIP files.
+
+### Unnecessary complexity (likely)
+
+- Full Strategy registry before a second generator exists (a single `ClipartGenerator` module may suffice until Phase 9).  
+- Deep template composition graphs (Animal → Ocean → Age) for Clipart MVP—flat YAML/JSON params are enough.  
+- Job orchestration and retries for a solo operator who could run a CLI twice a day.  
+- “Modern AI SaaS” dashboard aesthetics before the export path is boringly reliable.  
+- Multiple Publisher mode abstractions before Export is used daily.
+
+### Features that should probably be removed or deferred harder
+
+- Any early work on Gumroad/Shopify/Ko-fi adapters.  
+- Revenue charts before 10 live listings.  
+- PDF generation until a product type requires it (Clipart often does not).  
+- LLM-based QA until rule checks fail often enough to hurt.  
+- Multi-tenant auth, roles, billing—never near MVP.  
+- Cost-metering precision (good idea, easy rabbit hole).
+
+### Elegant decisions unlikely to improve early revenue
+
+| Decision | Critique |
+|----------|----------|
+| Heavy adapter purity for Research | A `briefs/` folder of JSON may beat a provider framework until tools stabilize. |
+| Separate Assembler module | Correct separation—but could start as functions inside an “export” script to ship faster, then split when a second generator arrives. |
+| Formal QA stage | Early on, opening the ZIP and looking may beat building a QA engine. Automate only after you’ve seen repeated failure modes. |
+| Generator Templates as a layer | Valuable later; risky if it becomes a mini product before Clipart packs sell. |
+| Keeping marketplace Publish mode in the design | Fine as a one-paragraph interface note; dangerous if any code is written for it pre-revenue. |
+| Analytics phase in the roadmap at all before consistent sales | Spreadsheets are enough until pain is real. |
+
+### Architect’s honest compression advice
+
+If schedule slips, collapse toward:
+
+**CSV brief → Clipart generate → zip+previews script → manual Etsy upload → sheet of results.**
+
+Re-introduce Engine registry, dashboard, QA module, and providers only when that loop is making money or clearly bottlenecked.
+
+The documents keep modular seams so expansion stays cheap—but **seams are not a license to implement every seam on day one.**
 
 ---
 
@@ -389,13 +501,15 @@ The SaaS-style dashboard exists to make the loop visible: what was generated, wh
 
 | Field | Value |
 |-------|--------|
-| Document | `PROJECT.md` |
+| Documents | `PROJECT.md`, `DECISIONS.md` |
 | Project | AI Product Factory |
 | Phase | Architecture / product brief only |
 | Code | **None** — intentionally |
-| Audience | Founder, future Cursor sessions, Lead Architect |
-| Next step | Approve vision → start Phase 0/1 coding milestones as separate Cursor tasks |
+| MVP generator | **Clipart** only |
+| Publisher MVP | **Export listing package** |
+| Research default | External / manual / CSV — **not** own AI agent |
+| Next step | Execute Foundation → Engine → Clipart milestones as separate Cursor tasks when coding begins |
 
 ---
 
-*This file is the constitution for AI Product Factory. Implementation must defer to these goals: MVP, validation before automation, low cost, modular adapters, and Generator Engine strategies—optimized for profitable products in the next 1–3 months.*
+*Constitution for AI Product Factory. Defer to: Generator Engine at the center, Assembler for packaging, export-first publishing, external research by default, ops-only MVP dashboard, one Clipart strategy—optimized for profitable products in 1–3 months. See `DECISIONS.md` for the decision log.*
