@@ -1,12 +1,18 @@
 import { createApp } from './bootstrap/composition-root.js';
+import { loadDotEnvIfPresent } from './config/load-dotenv.js';
+import { ConfigurationError, loadRuntimeConfig } from './config/runtime-config.js';
 
-/**
- * API process entry — M1 skeleton only.
- * No HTTP server or routes yet.
- */
-function main(): void {
-  const app = createApp();
-  console.log(`[api] ${app.name} skeleton booted (milestone M1)`);
+loadDotEnvIfPresent();
+
+try {
+  const config = loadRuntimeConfig();
+  const app = createApp(config);
+  console.log(`${app.name} composition ready (provider=${app.composition.config.imageProvider})`);
+} catch (error) {
+  if (error instanceof ConfigurationError) {
+    console.error(error.message);
+    process.exitCode = 1;
+  } else {
+    throw error;
+  }
 }
-
-main();
