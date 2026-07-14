@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "test": "npm run build -w @ai-product-factory/domain -w @ai-product-factory/application && tsx --test tests/**/*.test.ts",
+    "test": "npm run build -w @ai-product-factory/domain -w @ai-product-factory/application -w @ai-product-factory/infrastructure && tsx --test tests/**/*.test.ts",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
