@@ -5,17 +5,18 @@ Source of truth (repo root):
 - [`PROJECT.md`](./PROJECT.md) — product vision, MVP, roadmap, validation
 - [`DECISIONS.md`](./DECISIONS.md) — architectural decision log
 - [`SYSTEM.md`](./SYSTEM.md) — engineering organization
+- [`MILESTONE_REPORT.md`](./MILESTONE_REPORT.md) — completed milestone log
 
 ## Project Status
 
-| Field                          | Status                                                                                |
-| ------------------------------ | ------------------------------------------------------------------------------------- |
-| **Current Milestone**          | M3 — Application Layer foundation (orchestration contracts)                           |
-| **Architecture Status**        | Approved; Domain + Application contracts in place; no stage behavior yet              |
-| **Business Validation Status** | Not started (gate defined in `PROJECT.md`)                                            |
-| **Generator Status**           | Strategy/Engine **interfaces only** — First Commercial Generator not implemented (M6) |
-| **Research Status**            | `ResearchProvider` port only — no adapter implementation yet                          |
-| **Publisher Status**           | `Publisher` / `ExportProductService` contracts only — export not implemented yet      |
+| Field                          | Status                                                                           |
+| ------------------------------ | -------------------------------------------------------------------------------- |
+| **Current Milestone**          | M4 — Generator Engine implemented (fake strategy for tests only)                 |
+| **Architecture Status**        | Approved; Engine + Domain/Application contracts in place                         |
+| **Business Validation Status** | Not started (gate defined in `PROJECT.md`)                                       |
+| **Generator Status**           | Engine live; **no real product strategy** yet (First Commercial Generator = M6)  |
+| **Research Status**            | `ResearchProvider` port only — no adapter implementation yet                     |
+| **Publisher Status**           | `Publisher` / `ExportProductService` contracts only — export not implemented yet |
 
 ## Prerequisites
 
@@ -34,6 +35,7 @@ cp .env.example .env
 | Command                | Purpose                                  |
 | ---------------------- | ---------------------------------------- |
 | `npm run build`        | Build all workspaces that define `build` |
+| `npm test`             | Build domain + run unit tests (`tsx`)    |
 | `npm run lint`         | ESLint (minimal defaults)                |
 | `npm run format`       | Prettier write                           |
 | `npm run format:check` | Prettier check                           |

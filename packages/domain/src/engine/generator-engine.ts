@@ -12,7 +12,7 @@ import type { GenerationRequest, GenerationResult } from '../objects/index.js';
  * Must never contain category-specific logic (Clipart, Planner, Coloring Book, etc.).
  * Must never call Marketplace providers.
  *
- * Behavior is implemented in a later milestone — this file is the contract only.
+ * Concrete implementation: {@link DefaultGeneratorEngine} (Milestone M4).
  */
 export interface GeneratorEngine {
   /**
