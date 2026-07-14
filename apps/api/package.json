@@ -3,9 +3,26 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./composition": {
+      "types": "./dist/bootstrap/composition-root.d.ts",
+      "import": "./dist/bootstrap/composition-root.js"
+    },
+    "./config": {
+      "types": "./dist/config/runtime-config.d.ts",
+      "import": "./dist/config/runtime-config.js"
+    }
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "generate": "node dist/cli/generate.js"
   },
   "dependencies": {
     "@ai-product-factory/application": "*",

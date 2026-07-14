@@ -9,14 +9,14 @@ Source of truth (repo root):
 
 ## Project Status
 
-| Field                          | Status                                                                               |
-| ------------------------------ | ------------------------------------------------------------------------------------ |
-| **Current Milestone**          | M9 — HTTP Image Provider Infrastructure                                              |
-| **Architecture Status**        | Approved; HTTP ImageProvider adapters ready (OpenAI demo isolated)                   |
-| **Business Validation Status** | Not started (gate defined in `PROJECT.md`)                                           |
-| **Generator Status**           | Clipart + DefaultPromptBuilder + FakeImageProvider (OpenAI adapter ready, not wired) |
-| **Research Status**            | NotImplemented placeholder (tests may stub success to reach Generator)               |
-| **Publisher Status**           | NotImplemented placeholder — export not implemented yet                              |
+| Field                          | Status                                                                 |
+| ------------------------------ | ---------------------------------------------------------------------- |
+| **Current Milestone**          | M10 — First Real Image Generation                                      |
+| **Architecture Status**        | Approved; composition root switches Fake ↔ OpenAI via env              |
+| **Business Validation Status** | Not started (gate defined in `PROJECT.md`)                             |
+| **Generator Status**           | Clipart wired; `npm run generate` (Fake default / OpenAI with API key) |
+| **Research Status**            | NotImplemented placeholder (tests may stub success to reach Generator) |
+| **Publisher Status**           | NotImplemented placeholder — export not implemented yet                |
 
 ## Prerequisites
 
@@ -35,10 +35,24 @@ cp .env.example .env
 | Command                | Purpose                                  |
 | ---------------------- | ---------------------------------------- |
 | `npm run build`        | Build all workspaces that define `build` |
-| `npm test`             | Build domain + run unit tests (`tsx`)    |
+| `npm test`             | Build packages + run unit tests (`tsx`)  |
+| `npm run generate`     | Run Clipart via GeneratorEngine (CLI)    |
 | `npm run lint`         | ESLint (minimal defaults)                |
 | `npm run format`       | Prettier write                           |
 | `npm run format:check` | Prettier check                           |
+
+Generate (Fake by default — no API key):
+
+```bash
+npm run generate
+```
+
+Generate with OpenAI (real image; requires key in `.env` or env):
+
+```bash
+# .env: IMAGE_PROVIDER=openai, OPENAI_API_KEY=sk-..., OPENAI_IMAGE_MODEL=dall-e-3
+IMAGE_PROVIDER=openai npm run generate
+```
 
 API boot stub (after build):
 
@@ -50,13 +64,13 @@ npm run start -w @ai-product-factory/api
 ## Monorepo layout
 
 ```
-apps/api              REST API + composition root (empty wiring in M1/M2)
-apps/dashboard        Operator UI placeholder (empty until M8)
-packages/domain       Domain contracts: objects, Engine, strategies, Assembler, QA, Publisher, providers
-packages/application  Application use cases (M3 orchestration contracts; NotImplemented)
-packages/infrastructure Provider implementations (HTTP image base + OpenAI demo in M9)
+apps/api              Composition root + generate CLI (M10); REST later
+apps/dashboard        Operator UI placeholder
+packages/domain       Domain contracts: objects, Engine, strategies, ports
+packages/application  Application use cases (orchestration; PipelineExecutor)
+packages/infrastructure HTTP image base + OpenAIImageProvider
 packages/shared       Shared kernel (empty)
-tests/                Tests root (empty until tests exist)
+tests/                Unit / integration-style tests
 ```
 
 No Turborepo, Nx, Lerna, or pnpm workspace tooling — npm workspaces only.

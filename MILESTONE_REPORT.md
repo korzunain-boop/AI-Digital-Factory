@@ -18,7 +18,8 @@ Source of truth for product/architecture remains `PROJECT.md`, `DECISIONS.md`, a
 | M7        | Image Provider Abstraction            | Complete    |
 | M8        | Prompt Generation Layer               | Complete    |
 | M9        | HTTP Image Provider Infrastructure    | Complete    |
-| M10+      | Assembler / Dashboard / QA / Export … | Not started |
+| M10       | First Real Image Generation           | Complete    |
+| M11+      | Assembler / Dashboard / QA / Export … | Not started |
 
 ---
 
@@ -462,7 +463,7 @@ Run: `npm test` (mocked HttpClient only — no live network / no real API keys).
 
 ### Next Milestone
 
-**Assembler** (or next engineering milestone per active roadmap): package AssetBundles into ProductPackages. Optionally wire composition root: config → OpenAIImageProvider → Clipart — first real image path without changing Engine/Pipeline/PromptBuilder/Clipart.
+**M10 — First Real Image Generation** — complete (see below).
 
 ### Self-review (M9)
 
@@ -488,6 +489,72 @@ Run: `npm test` (mocked HttpClient only — no live network / no real API keys).
 - OpenAI size mapping is a coarse width/height → enum heuristic
 - Negative prompts unused by OpenAI Images API mapping (left in Domain prompt for other vendors)
 - Composition root still does not assemble the real provider graph
+
+---
+
+## M10 — First Real Image Generation
+
+**Date:** 2026-07-14
+
+### Implemented
+
+- Composition root wires:
+  - `GenerationRequest` → `DefaultGeneratorEngine` → `ClipartGeneratorStrategy` → `DefaultPromptBuilder` → `ImageProvider` → `GenerationResult`
+- **Config-only** switch between `FakeImageProvider` and `OpenAIImageProvider` via `IMAGE_PROVIDER`
+- Runtime config from env: `OPENAI_API_KEY`, `OPENAI_IMAGE_MODEL` (+ optional base URL / timeout / retries)
+- CLI: `npm run generate` (sample request, prints image locations / metadata)
+- Clear `ConfigurationError` when `IMAGE_PROVIDER=openai` and API key is missing
+- No Storage / Marketplace / Assembler / QA / Publisher / Research / Dashboard
+
+### Files Added / Changed
+
+| Path                                         | Purpose                                     |
+| -------------------------------------------- | ------------------------------------------- |
+| `apps/api/src/config/runtime-config.ts`      | Env → RuntimeConfig + ConfigurationError    |
+| `apps/api/src/config/load-dotenv.ts`         | Optional `.env` load (no dotenv dependency) |
+| `apps/api/src/bootstrap/composition-root.ts` | Wire Engine + Clipart + ImageProvider       |
+| `apps/api/src/cli/generate.ts`               | `npm run generate` CLI                      |
+| `apps/api/src/index.ts`                      | Boot stub uses composition                  |
+| `apps/api/package.json`                      | exports + `generate` script                 |
+| `tests/api/composition-generate.test.ts`     | Integration-style mocked OpenAI flow        |
+| `.env.example`                               | Document IMAGE_PROVIDER / OpenAI vars       |
+| `package.json`                               | root `generate` + build api for tests       |
+| `README.md` / `MILESTONE_REPORT.md`          | Status + M10 report                         |
+
+### Tests
+
+| Test                                      | Asserts                                                         |
+| ----------------------------------------- | --------------------------------------------------------------- |
+| Config switch + Engine flow (mocked HTTP) | Fake → memory://; OpenAI config → Engine returns mocked CDN URL |
+| Missing OPENAI_API_KEY                    | `ConfigurationError` with user-friendly message                 |
+
+Run: `npm test` (no live network). Live proof: `IMAGE_PROVIDER=openai OPENAI_API_KEY=… npm run generate`.
+
+### Known Limitations
+
+1. CLI uses `assetCount: 1` sample — not a full marketplace pack.
+2. Image URLs may be temporary (OpenAI) or data-URLs — no StorageProvider yet.
+3. No Assembler package/ZIP; output is GenerationResult AssetBundle only.
+4. Default provider remains `fake` so CI/`npm run generate` works without secrets.
+5. Pipeline / Research / JobRepository still not wired for end-to-end jobs.
+
+### Next Milestone
+
+**Assembler** — turn AssetBundles into ProductPackages (ZIP, previews, listing metadata) so output is closer to a sellable listing export.
+
+### Self-review (M10)
+
+**Did the architecture require any changes?**
+
+No. Domain Engine, Clipart, PromptBuilder, and ImageProvider ports were unchanged. M10 only added composition-root wiring, env config, and a CLI.
+
+**What is the next biggest blocker before creating a sellable product?**
+
+**Assembler + durable packaging** (and then Export Publisher): operators still cannot ship a listing ZIP with previews/metadata from AssetBundle URLs alone. Storage for non-ephemeral bytes is a close second.
+
+**What should be deleted now that real generation exists?**
+
+Nothing in the architecture. Keep `FakeImageProvider` for tests and offline CLI. Do **not** delete placeholder Research/Assembler/QA/Publisher ports. Optional cleanup later: stale comments that say composition root “wires nothing,” and any leftover placeholder env keys superseded by `IMAGE_PROVIDER` / `OPENAI_*`.
 
 ---
 
