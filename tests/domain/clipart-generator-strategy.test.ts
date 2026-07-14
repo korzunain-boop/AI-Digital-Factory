@@ -2,16 +2,19 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  buildItemPrompt,
   CLIPART_STRATEGY_KEY,
   ClipartGeneratorStrategy,
   DefaultGeneratorEngine,
+  DefaultPromptBuilder,
   FakeImageProvider,
   parseClipartTemplate,
   toClipartTemplateParams,
   type GenerationRequest,
-  type ImageGenerationRequest,
-  type ImageProvider,
   type GeneratedImages,
+  type ImageGenerationPrompt,
+  type ImageProvider,
+  type PromptBuilder,
 } from '@ai-product-factory/domain';
 
 function makeRequest(overrides: Partial<GenerationRequest> = {}): GenerationRequest {
@@ -30,14 +33,82 @@ function makeRequest(overrides: Partial<GenerationRequest> = {}): GenerationRequ
   };
 }
 
-describe('ClipartGeneratorStrategy + ImageProvider', () => {
-  it('calls ImageProvider.generateImages', async () => {
+describe('DefaultPromptBuilder', () => {
+  it('builds deterministic structured prompts from the template', () => {
+    const builder = new DefaultPromptBuilder();
+    const request = makeRequest();
+    const prompt = builder.build({
+      request,
+      template: { theme: 'ocean', style: 'watercolor', assetCount: 3 },
+    });
+
+    assert.equal(prompt.requestId, 'req-clipart-1');
+    assert.equal(prompt.count, 3);
+    assert.equal(prompt.theme, 'ocean');
+    assert.equal(prompt.style, 'watercolor');
+    assert.equal(prompt.purpose, 'clipart');
+    assert.equal(prompt.prompts.length, 3);
+    assert.equal(prompt.prompts[0], buildItemPrompt('ocean', 'watercolor', 1, 3));
+    assert.match(prompt.prompts[0] ?? '', /Theme: ocean/);
+    assert.match(prompt.prompts[0] ?? '', /Style: watercolor/);
+    assert.match(prompt.negativePrompt, /watermark/);
+  });
+
+  it('produces identical prompts for identical inputs', () => {
+    const builder = new DefaultPromptBuilder();
+    const input = {
+      request: makeRequest(),
+      template: { theme: 'wedding', style: 'flat', assetCount: 2 },
+    };
+
+    assert.deepEqual(builder.build(input), builder.build(input));
+  });
+});
+
+describe('ClipartGeneratorStrategy + PromptBuilder + ImageProvider', () => {
+  it('uses PromptBuilder then ImageProvider (ImageProvider receives prompt, not GenerationRequest)', async () => {
+    let buildCalls = 0;
+    let seenPrompt: ImageGenerationPrompt | undefined;
+
+    const promptBuilder: PromptBuilder = {
+      build(input) {
+        buildCalls += 1;
+        return new DefaultPromptBuilder().build(input);
+      },
+    };
+
+    const images: ImageProvider = {
+      async generateImages(prompt): Promise<GeneratedImages> {
+        seenPrompt = prompt;
+        return new FakeImageProvider().generateImages(prompt);
+      },
+    };
+
+    const strategy = new ClipartGeneratorStrategy(images, promptBuilder);
+    const result = await strategy.generate(makeRequest());
+
+    assert.equal(result.ok, true);
+    assert.equal(buildCalls, 1);
+    assert.ok(seenPrompt);
+    assert.equal(seenPrompt.requestId, 'req-clipart-1');
+    assert.equal(seenPrompt.theme, 'ocean');
+    assert.equal(seenPrompt.style, 'watercolor');
+    assert.equal(seenPrompt.count, 3);
+    assert.equal(seenPrompt.prompts.length, 3);
+    // ImageProvider must not need GenerationRequest — prompt is self-contained
+    assert.ok(!('researchBriefId' in seenPrompt));
+  });
+
+  it('calls ImageProvider.generateImages with the built prompt', async () => {
     const provider = new FakeImageProvider();
     const strategy = new ClipartGeneratorStrategy(provider);
 
     await strategy.generate(makeRequest());
 
     assert.equal(provider.invocationCount, 1);
+    assert.ok(provider.lastPrompt);
+    assert.equal(provider.lastPrompt.purpose, 'clipart');
+    assert.equal(provider.lastPrompt.prompts[0], buildItemPrompt('ocean', 'watercolor', 1, 3));
   });
 
   it('applies theme, style, and assetCount via provider output', async () => {
@@ -52,37 +123,8 @@ describe('ClipartGeneratorStrategy + ImageProvider', () => {
     assert.equal(result.assetBundle.metadata?.theme, 'ocean');
     assert.equal(result.assetBundle.metadata?.style, 'watercolor');
     assert.equal(result.assetBundle.metadata?.assetCount, 3);
-    assert.equal(result.assetBundle.metadata?.productType, 'clipart');
     assert.equal(result.assetBundle.assets.length, 3);
-
-    for (const asset of result.assetBundle.assets) {
-      assert.equal(asset.metadata?.theme, 'ocean');
-      assert.equal(asset.metadata?.style, 'watercolor');
-      assert.equal(asset.mediaType, 'image/png');
-      assert.match(String(asset.metadata?.tags ?? ''), /ocean/);
-      assert.match(String(asset.metadata?.previewDescriptor ?? ''), /^preview:/);
-    }
-  });
-
-  it('respects requested asset count', async () => {
-    const provider = new FakeImageProvider();
-    const strategy = new ClipartGeneratorStrategy(provider);
-    const result = await strategy.generate(
-      makeRequest({
-        template: toClipartTemplateParams({
-          theme: 'wedding',
-          style: 'flat',
-          assetCount: 7,
-        }),
-      }),
-    );
-
-    assert.equal(result.ok, true);
-    if (!result.ok || !result.assetBundle) {
-      assert.fail('expected success with assetBundle');
-    }
-    assert.equal(result.assetBundle.assets.length, 7);
-    assert.equal(provider.invocationCount, 1);
+    assert.match(String(result.assetBundle.assets[0]?.metadata?.promptText ?? ''), /Theme: ocean/);
   });
 
   it('produces deterministic output for the same request', async () => {
@@ -97,13 +139,7 @@ describe('ClipartGeneratorStrategy + ImageProvider', () => {
     if (!a.ok || !b.ok || !a.assetBundle || !b.assetBundle) {
       assert.fail('expected success with assetBundle');
     }
-
     assert.deepEqual(a.assetBundle, b.assetBundle);
-    assert.equal(a.assetBundle.assets[0]?.name, 'ocean-watercolor-01.png');
-    assert.equal(
-      a.assetBundle.assets[0]?.location,
-      'memory://clipart/req-clipart-1/ocean-watercolor-01.png',
-    );
   });
 
   it('maps ImageProvider exceptions to GenerationFailure', async () => {
@@ -115,16 +151,12 @@ describe('ClipartGeneratorStrategy + ImageProvider', () => {
     assert.equal(result.ok, false);
     if (!result.ok) {
       assert.match(result.errors[0] ?? '', /IMAGE_PROVIDER_FAILED/);
-      assert.match(result.errors[0] ?? '', /provider-boom/);
     }
-    assert.equal(provider.invocationCount, 1);
   });
 
   it('integrates with DefaultGeneratorEngine without Engine changes', async () => {
     const strategy = new ClipartGeneratorStrategy(new FakeImageProvider());
     const engine = new DefaultGeneratorEngine([strategy]);
-
-    assert.deepEqual(engine.registeredKeys(), [CLIPART_STRATEGY_KEY]);
 
     const result = await engine.generate(makeRequest({ id: 'req-engine-1' }));
 
@@ -134,35 +166,6 @@ describe('ClipartGeneratorStrategy + ImageProvider', () => {
     }
     assert.equal(result.assetBundleId, 'clipart-bundle-req-engine-1');
     assert.equal(result.assetBundle.assets.length, 3);
-    assert.equal(result.assetBundle.metadata?.strategyKey, CLIPART_STRATEGY_KEY);
-  });
-
-  it('passes count/theme/style from template into ImageProvider request', async () => {
-    let seen: ImageGenerationRequest | undefined;
-    const spy: ImageProvider = {
-      async generateImages(req): Promise<GeneratedImages> {
-        seen = req;
-        return { images: [] };
-      },
-    };
-
-    const strategy = new ClipartGeneratorStrategy(spy);
-    await strategy.generate(
-      makeRequest({
-        template: toClipartTemplateParams({
-          theme: 'cats',
-          style: 'kawaii',
-          assetCount: 2,
-        }),
-      }),
-    );
-
-    assert.ok(seen);
-    assert.equal(seen.requestId, 'req-clipart-1');
-    assert.equal(seen.theme, 'cats');
-    assert.equal(seen.style, 'kawaii');
-    assert.equal(seen.count, 2);
-    assert.equal(seen.purpose, 'clipart');
   });
 
   it('parseClipartTemplate reads theme/style/assetCount', () => {

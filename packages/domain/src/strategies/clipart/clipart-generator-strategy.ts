@@ -5,6 +5,8 @@ import type {
   GenerationResult,
 } from '../../objects/index.js';
 import type { StrategyKey } from '../../objects/ids.js';
+import type { PromptBuilder } from '../../prompts/prompt-builder.js';
+import { DefaultPromptBuilder } from '../../prompts/default-prompt-builder.js';
 import type { GeneratedImages, ImageProvider } from '../../providers/image-provider.js';
 import type { GeneratorStrategy } from '../generator-strategy.js';
 import {
@@ -14,15 +16,15 @@ import {
 } from './clipart-template.js';
 
 /**
- * First commercial GeneratorStrategy: Clipart (M6 + M7).
+ * First commercial GeneratorStrategy: Clipart (M6–M8).
  *
  * Responsibility:
- *   Parse ClipartGeneratorTemplate → call ImageProvider.generateImages →
+ *   Parse ClipartGeneratorTemplate → PromptBuilder → ImageProvider →
  *   assemble AssetBundle → GenerationResult.
  *
- * M7:
- *   Does NOT build image assets itself. Image generation is delegated to ImageProvider
- *   (FakeImageProvider for now; OpenAI/Flux later behind the same port).
+ * M8:
+ *   Does not pass template fields directly to ImageProvider.
+ *   PromptBuilder owns prompt construction; ImageProvider receives ImageGenerationPrompt only.
  *
  * Engine integration:
  *   Registers under {@link CLIPART_STRATEGY_KEY}; DefaultGeneratorEngine unchanged.
@@ -30,13 +32,20 @@ import {
 export class ClipartGeneratorStrategy implements GeneratorStrategy {
   readonly key: StrategyKey = CLIPART_STRATEGY_KEY;
 
-  /**
-   * @param images ImageProvider used to produce GeneratedImages (required).
-   */
-  constructor(private readonly images: ImageProvider) {}
+  private readonly images: ImageProvider;
+  private readonly prompts: PromptBuilder;
 
   /**
-   * Generate a clipart AssetBundle via ImageProvider.
+   * @param images ImageProvider used to produce GeneratedImages (required).
+   * @param prompts PromptBuilder for ImageGenerationPrompt (defaults to DefaultPromptBuilder).
+   */
+  constructor(images: ImageProvider, prompts: PromptBuilder = new DefaultPromptBuilder()) {
+    this.images = images;
+    this.prompts = prompts;
+  }
+
+  /**
+   * Generate a clipart AssetBundle via PromptBuilder + ImageProvider.
    */
   async generate(request: GenerationRequest): Promise<GenerationResult> {
     const parsed = parseClipartTemplate(request.template);
@@ -56,17 +65,14 @@ export class ClipartGeneratorStrategy implements GeneratorStrategy {
       assetCount: effectiveCount,
     };
 
+    const prompt = this.prompts.build({
+      request,
+      template: effectiveTemplate,
+    });
+
     let generated: GeneratedImages;
     try {
-      generated = await this.images.generateImages({
-        requestId: request.id,
-        count: effectiveTemplate.assetCount,
-        theme: effectiveTemplate.theme,
-        style: effectiveTemplate.style,
-        purpose: 'clipart',
-        width: 2048,
-        height: 2048,
-      });
+      generated = await this.images.generateImages(prompt);
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : 'ImageProvider failed';
       return {
@@ -101,7 +107,6 @@ function resolveAssetCount(template: ClipartGeneratorTemplate, maxAssets?: numbe
 
 /**
  * Map provider GeneratedImages into a Domain AssetBundle with clipart pack metadata.
- * Does not invent pixels — only wraps provider descriptors + listing hints.
  */
 export function assembleClipartAssetBundle(
   request: GenerationRequest,

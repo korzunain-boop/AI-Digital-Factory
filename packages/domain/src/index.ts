@@ -1,8 +1,8 @@
 /**
  * @ai-product-factory/domain
  *
- * Domain contracts through Milestone M7 (ImageProvider abstraction + Clipart via provider).
- * No marketplace, filesystem, or AI SDK usage in FakeImageProvider.
+ * Domain contracts through Milestone M8 (PromptBuilder + ImageProvider + Clipart).
+ * No marketplace, filesystem, or AI SDK usage in FakeImageProvider / DefaultPromptBuilder.
  */
 
 export type * from './objects/index.js';
@@ -38,7 +38,6 @@ export type {
   TextGenerateInput,
   TextGenerateOutput,
   TextProvider,
-  ImageGenerationRequest,
   GeneratedImage,
   GeneratedImages,
   ImageProvider,
@@ -48,3 +47,5 @@ export type {
   MarketplaceProvider,
 } from './providers/index.js';
 export { FakeImageProvider } from './providers/index.js';
+export type { ImageGenerationPrompt, PromptBuilder, PromptBuilderInput } from './prompts/index.js';
+export { DefaultPromptBuilder, buildItemPrompt } from './prompts/index.js';
