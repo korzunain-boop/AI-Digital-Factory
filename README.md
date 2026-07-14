@@ -11,10 +11,10 @@ Source of truth (repo root):
 
 | Field                          | Status                                                                 |
 | ------------------------------ | ---------------------------------------------------------------------- |
-| **Current Milestone**          | M5 — Pipeline Execution (Generator only; other stages NotImplemented)  |
-| **Architecture Status**        | Approved; Engine + PipelineExecutor orchestration in place             |
+| **Current Milestone**          | M6 — First Commercial Generator skeleton (Clipart, deterministic)      |
+| **Architecture Status**        | Approved; Engine + Pipeline + Clipart strategy in place                |
 | **Business Validation Status** | Not started (gate defined in `PROJECT.md`)                             |
-| **Generator Status**           | Engine live via pipeline; **no real product strategy** yet (M6)        |
+| **Generator Status**           | Clipart strategy live (deterministic assets; no AI/image APIs yet)     |
 | **Research Status**            | NotImplemented placeholder (tests may stub success to reach Generator) |
 | **Publisher Status**           | NotImplemented placeholder — export not implemented yet                |
 

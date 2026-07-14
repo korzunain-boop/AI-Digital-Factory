@@ -1,3 +1,4 @@
+import type { AssetBundle } from './asset-bundle.js';
 import type { AssetBundleId, GenerationRequestId } from './ids.js';
 
 /**
@@ -15,8 +16,14 @@ export interface GenerationSuccess {
   /** Request that was executed. */
   readonly generationRequestId: GenerationRequestId;
 
-  /** Produced asset bundle. */
+  /** Produced asset bundle id (stable reference for Job / retries). */
   readonly assetBundleId: AssetBundleId;
+
+  /**
+   * Full AssetBundle when produced in-memory (e.g. before StorageProvider exists).
+   * Future image providers will persist bytes and may omit this, leaving only locations on AssetItems.
+   */
+  readonly assetBundle?: AssetBundle;
 
   /** Optional rough cost estimate (currency-agnostic). */
   readonly approximateCost?: number;
