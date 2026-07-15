@@ -4,13 +4,17 @@ import type { BrowserFactory } from './browser.js';
 import { closeSession, defaultBrowserFactory } from './browser.js';
 import { normalizeListing } from './normalize.js';
 import { scrapeListingPage } from './scrape-listing.js';
-import { collectSearchListingUrls } from './scrape-search.js';
+import { collectSearchListingUrls, type CollectSearchOptions } from './scrape-search.js';
 import type { EtsyListing, RawListingData, ResearchResult } from './types.js';
 import { buildSearchUrl, canonicalizeListingUrl, classifyEtsyUrl } from './urls.js';
 import { defaultOutputDir, writeResearchOutput } from './write-output.js';
 
 export type ListingScraper = (page: Page, listingUrl: string) => Promise<RawListingData>;
-export type SearchUrlCollector = (page: Page, searchUrl: string) => Promise<string[]>;
+export type SearchUrlCollector = (
+  page: Page,
+  searchUrl: string,
+  options?: CollectSearchOptions,
+) => Promise<string[]>;
 
 export interface ResearchOptions {
   readonly browserFactory?: BrowserFactory;
@@ -22,6 +26,9 @@ export interface ResearchOptions {
   readonly writeOutput?: boolean;
   /** Override stored result.input (e.g. free-text query for research-search). */
   readonly inputLabel?: string;
+  /** Print search scrape diagnostics. */
+  readonly debug?: boolean;
+  readonly log?: (line: string) => void;
 }
 
 /**
@@ -85,12 +92,23 @@ async function researchSearchUrl(
   const collect = options.collectSearchUrls ?? collectSearchListingUrls;
   const session = await factory();
   const maxListings = options.maxListings ?? 24;
+  const outputDir = options.outputDir ?? defaultOutputDir();
 
   try {
-    const urls = (await collect(session.page, searchUrl)).slice(0, maxListings);
+    const urls = (
+      await collect(session.page, searchUrl, {
+        debug: options.debug,
+        outputDir,
+        log: options.log ?? ((line) => console.error(line)),
+      })
+    ).slice(0, maxListings);
+
     const listings: EtsyListing[] = [];
 
     for (const url of urls) {
+      if (options.debug) {
+        (options.log ?? console.error)(`[debug] scraping listing: ${url}`);
+      }
       const raw = await scrape(session.page, url);
       listings.push(normalizeListing(raw, url));
     }
