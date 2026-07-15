@@ -32,14 +32,16 @@ cp .env.example .env
 
 ## Scripts
 
-| Command                | Purpose                                  |
-| ---------------------- | ---------------------------------------- |
-| `npm run build`        | Build all workspaces that define `build` |
-| `npm test`             | Build packages + run unit tests (`tsx`)  |
-| `npm run generate`     | Run Clipart via GeneratorEngine (CLI)    |
-| `npm run lint`         | ESLint (minimal defaults)                |
-| `npm run format`       | Prettier write                           |
-| `npm run format:check` | Prettier check                           |
+| Command                   | Purpose                                   |
+| ------------------------- | ----------------------------------------- |
+| `npm run build`           | Build all workspaces that define `build`  |
+| `npm test`                | Build packages + run unit tests (`tsx`)   |
+| `npm run generate`        | Run Clipart via GeneratorEngine (CLI)     |
+| `npm run research`        | Standalone Etsy listing scrape (dev tool) |
+| `npm run research-search` | Standalone Etsy search scrape (dev tool)  |
+| `npm run lint`            | ESLint (minimal defaults)                 |
+| `npm run format`          | Prettier write                            |
+| `npm run format:check`    | Prettier check                            |
 
 Generate (Fake by default — no API key):
 
@@ -71,9 +73,20 @@ packages/application  Application use cases (orchestration; PipelineExecutor)
 packages/infrastructure HTTP image base + OpenAIImageProvider
 packages/shared       Shared kernel (empty)
 tests/                Unit / integration-style tests
+tools/etsy-research   Standalone Etsy research CLI (not part of product architecture)
 ```
 
 No Turborepo, Nx, Lerna, or pnpm workspace tooling — npm workspaces only.
+
+## Standalone tools
+
+`tools/etsy-research` is an **internal developer utility** (Playwright + TypeScript). It is **not** wired into Generator, Pipeline, or ResearchProvider. See `tools/etsy-research/README.md`.
+
+```bash
+cd tools/etsy-research && npm install
+npm run research -- "https://www.etsy.com/listing/<id>/<slug>"
+npm run research-search -- "educational posters"
+```
 
 ## Milestones
 
