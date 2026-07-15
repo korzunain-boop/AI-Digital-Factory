@@ -185,29 +185,3 @@ export const EXTRACT_LISTING_SCRIPT = `(() => {
     breadcrumbText: categoryBreadcrumb.join(' > ') || null,
   };
 })()`;
-
-export const COLLECT_SEARCH_URLS_SCRIPT = `(() => {
-  const anchors = Array.from(document.querySelectorAll('a[href*="/listing/"]'));
-  const hrefs = anchors
-    .map((a) => a.href)
-    .filter((href) => /\\/listing\\/\\d+/i.test(href));
-
-  const seen = new Set();
-  const out = [];
-  for (const href of hrefs) {
-    try {
-      const url = new URL(href);
-      const match = url.pathname.match(/\\/listing\\/(\\d+)/i);
-      if (!match) continue;
-      const id = match[1];
-      if (seen.has(id)) continue;
-      seen.add(id);
-      const slugMatch = url.pathname.match(/\\/listing\\/\\d+\\/([^/?#]+)/);
-      const slug = slugMatch && slugMatch[1] ? '/' + slugMatch[1] : '';
-      out.push('https://www.etsy.com/listing/' + id + slug);
-    } catch (e) {
-      // skip bad hrefs
-    }
-  }
-  return out;
-})()`;
