@@ -1,0 +1,25 @@
+{
+  "name": "@ai-product-factory/etsy-research",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Standalone internal Etsy research CLI (not part of AI Factory architecture)",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "research": "tsx src/cli.ts research",
+    "research-search": "tsx src/cli.ts research-search",
+    "test": "tsx --test tests/**/*.test.ts",
+    "postinstall": "playwright install chromium"
+  },
+  "dependencies": {
+    "playwright": "^1.51.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
