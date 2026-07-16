@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@ai-product-factory/domain": "*",
-    "@ai-product-factory/shared": "*"
+    "@ai-product-factory/shared": "*",
+    "sharp": "^0.33.5"
   }
 }

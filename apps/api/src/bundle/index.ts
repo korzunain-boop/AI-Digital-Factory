@@ -13,3 +13,5 @@ export type { BundleIllustrationRecord, BundleManifest, PromptsFile } from './sa
 
 export { generateIllustrationBundle } from './bundle-generator.js';
 export type { GenerateBundleInput, GenerateBundleResult } from './bundle-generator.js';
+
+export { generatePostersFromBundle } from './generate-posters.js';

@@ -60,3 +60,24 @@ export {
   DEFAULT_ILLUSTRATION_COUNT,
   FakeCreativeDirector,
 } from './creative/index.js';
+
+export type {
+  PaperSize,
+  PaperSizeId,
+  PosterTemplate,
+  PosterTitleStyle,
+  Rect,
+  PosterLayoutGeometry,
+  PreviewGridGeometry,
+  LayoutEngine,
+  LayoutPosterInput,
+} from './layout/index.js';
+export {
+  PAPER_A4,
+  PAPER_US_LETTER,
+  PAPER_SIZES,
+  resolvePaperSize,
+  ETSY_CLASSIC_POSTER_TEMPLATE,
+  computePosterLayout,
+  computePreviewGrid,
+} from './layout/index.js';
