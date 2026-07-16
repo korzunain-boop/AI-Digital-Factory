@@ -1,14 +1,18 @@
-import type { ImageGenerationPrompt, ImageProvider } from '@ai-product-factory/domain';
+import type { ImageGenerationPrompt, ImageProvider, LLMProvider } from '@ai-product-factory/domain';
 
-import { DEFAULT_ILLUSTRATION_COUNT, generateIllustrationList } from './illustration-list.js';
-import { composeIllustrationPrompts } from './prompt-composer.js';
+import {
+  DEFAULT_ILLUSTRATION_COUNT,
+  generatePromptsWithLLM,
+  generateStyleGuideWithLLM,
+  generateSubjectsWithLLM,
+} from './llm-bundle-content.js';
 import {
   resolveImageBytes,
   saveBundleArtifacts,
   slugifyFileName,
   type BundleManifest,
 } from './save-bundle.js';
-import { generateStyleGuide, type StyleGuide } from './style-guide.js';
+import type { StyleGuide } from './style-guide.js';
 
 export interface GenerateBundleInput {
   readonly theme: string;
@@ -28,13 +32,20 @@ export interface GenerateBundleResult {
 }
 
 /**
- * Product Sprint 1 orchestrator:
- * Theme → Style Guide (once) → illustration list → prompts → ImageProvider → disk artifacts.
+ * Product Sprint 1 orchestrator (LLM-driven content):
  *
- * Does not touch ClipartGeneratorStrategy / PromptBuilder / Pipeline / Assembler.
+ *   Theme
+ *     → LLM Style Guide
+ *     → LLM illustration subjects
+ *     → LLM prompts
+ *     → ImageProvider (unchanged)
+ *     → disk artifacts
+ *
+ * No hardcoded theme catalogs. ImageProvider pipeline unchanged.
  */
 export async function generateIllustrationBundle(
   images: ImageProvider,
+  llm: LLMProvider,
   input: GenerateBundleInput,
 ): Promise<GenerateBundleResult> {
   const theme = input.theme.trim();
@@ -43,9 +54,10 @@ export async function generateIllustrationBundle(
   }
 
   const count = input.count ?? DEFAULT_ILLUSTRATION_COUNT;
-  const styleGuide = generateStyleGuide(theme);
-  const subjects = generateIllustrationList(theme, count);
-  const prompts = composeIllustrationPrompts(styleGuide, subjects);
+
+  const styleGuide = await generateStyleGuideWithLLM(llm, theme);
+  const subjects = await generateSubjectsWithLLM(llm, theme, styleGuide, count);
+  const prompts = await generatePromptsWithLLM(llm, styleGuide, subjects);
 
   const prompt: ImageGenerationPrompt = {
     requestId: input.requestId ?? `bundle-${Date.now()}`,

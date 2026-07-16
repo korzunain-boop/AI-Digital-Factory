@@ -4,12 +4,14 @@
  *
  *   npm run generate-bundle -- "Nursery Animals"
  *
- * Uses composition-root ImageProvider (Fake by default; OpenAI via IMAGE_PROVIDER=openai).
- * No poster layout, PDF, ZIP, marketplace, QA, or dashboard.
+ * LLM content via FakeLLMProvider until a real LLM adapter exists.
+ * Images via composition-root ImageProvider (Fake / OpenAI).
  */
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { FakeLLMProvider } from '@ai-product-factory/domain';
 
 import { generateIllustrationBundle, slugifyFileName } from '../bundle/index.js';
 import { createComposition } from '../bootstrap/composition-root.js';
@@ -20,19 +22,18 @@ function printUsage(): void {
   console.error(`Usage:
   npm run generate-bundle -- "<theme>"
 
-Example:
+Examples:
   npm run generate-bundle -- "Nursery Animals"
+  npm run generate-bundle -- "Ocean"
+  npm run generate-bundle -- "Dinosaurs"
 
-Env:
+Env (images only — LLM adapter not implemented yet; FakeLLMProvider is used):
   IMAGE_PROVIDER=fake|openai
   OPENAI_API_KEY=...
   OPENAI_IMAGE_MODEL=dall-e-3
 `);
 }
 
-/**
- * Prefer monorepo root `output/` (walk up looking for apps/ + packages/).
- */
 function resolveOutputRoot(): string {
   let dir = dirname(fileURLToPath(import.meta.url));
   for (let i = 0; i < 8; i += 1) {
@@ -67,20 +68,23 @@ async function main(argv: string[]): Promise<void> {
   }
 
   const { imageProvider } = createComposition(config);
+  const llm = new FakeLLMProvider();
   const themeSlug = slugifyFileName(theme);
   const outputDir = resolve(resolveOutputRoot(), themeSlug);
 
   console.log(`Theme: ${theme}`);
+  console.log(`LLM provider: FakeLLMProvider (no OpenAI LLM adapter yet)`);
   console.log(`Image provider: ${config.imageProvider}`);
   console.log(`Output: ${outputDir}`);
-  console.log('Generating Style Guide + illustration list + prompts…');
+  console.log('LLM → Style Guide → subjects → prompts…');
 
-  const result = await generateIllustrationBundle(imageProvider, {
+  const result = await generateIllustrationBundle(imageProvider, llm, {
     theme,
     outputDir,
   });
 
   console.log(`Style guide: ${result.styleGuide.illustrationStyle}`);
+  console.log(`LLM calls: ${llm.invocationCount}`);
   console.log(`Illustrations: ${result.subjects.length}`);
   console.log(`Saved: ${result.outputDir}`);
   console.log(`  - style-guide.json`);

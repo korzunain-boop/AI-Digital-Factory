@@ -10,6 +10,15 @@ export type { GeneratedImage, GeneratedImages, ImageProvider } from './image-pro
 
 export { FakeImageProvider } from './fake-image-provider.js';
 
+export type {
+  LLMCompleteInput,
+  LLMCompleteOutput,
+  LLMPurpose,
+  LLMProvider,
+} from './llm-provider.js';
+
+export { FakeLLMProvider } from './fake-llm-provider.js';
+
 export type { StoragePutInput, StorageProvider } from './storage-provider.js';
 
 export type { MarketplacePublishInput, MarketplaceProvider } from './marketplace-provider.js';

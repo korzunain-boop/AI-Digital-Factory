@@ -4,89 +4,88 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { FakeImageProvider } from '@ai-product-factory/domain';
+import { FakeImageProvider, FakeLLMProvider } from '@ai-product-factory/domain';
 
 import {
-  composeIllustrationPrompt,
-  composeIllustrationPrompts,
   DEFAULT_ILLUSTRATION_COUNT,
   generateIllustrationBundle,
-  generateIllustrationList,
-  generateStyleGuide,
+  generatePromptsWithLLM,
+  generateStyleGuideWithLLM,
+  generateSubjectsWithLLM,
   PLACEHOLDER_PNG,
   resolveImageBytes,
 } from '@ai-product-factory/api/bundle';
 
-describe('Product Sprint 1 — Style Guide', () => {
-  it('generates a complete Style Guide once for a theme (deterministic)', () => {
-    const a = generateStyleGuide('Nursery Animals');
-    const b = generateStyleGuide('Nursery Animals');
+describe('Product Sprint 1 — LLM Style Guide', () => {
+  it('generates Style Guide via LLMProvider (no hardcoded guide)', async () => {
+    const llm = new FakeLLMProvider();
+    const guide = await generateStyleGuideWithLLM(llm, 'Ocean');
 
-    assert.equal(a.theme, 'Nursery Animals');
-    assert.ok(a.palette.length >= 3);
-    assert.ok(a.illustrationStyle.length > 0);
-    assert.ok(a.composition.length > 0);
-    assert.ok(a.lighting.length > 0);
-    assert.ok(a.mood.length > 0);
-    assert.ok(a.negativeConstraints.includes('watermark'));
-    assert.deepEqual(a, b);
+    assert.equal(llm.invocationCount, 1);
+    assert.equal(llm.calls[0]?.purpose, 'style-guide');
+    assert.equal(guide.theme, 'Ocean');
+    assert.ok(guide.palette.length >= 1);
+    assert.ok(guide.illustrationStyle.length > 0);
+    assert.ok(guide.composition.length > 0);
+    assert.ok(guide.lighting.length > 0);
+    assert.ok(guide.mood.length > 0);
+    assert.ok(guide.negativeConstraints.length > 0);
   });
 });
 
-describe('Product Sprint 1 — illustration list', () => {
-  it('defaults to 24 nursery animals for Nursery Animals theme', () => {
-    const list = generateIllustrationList('Nursery Animals');
-    assert.equal(list.length, DEFAULT_ILLUSTRATION_COUNT);
-    assert.equal(list[0], 'Elephant');
-    assert.equal(list[1], 'Lion');
-    assert.equal(list[2], 'Fox');
-    assert.equal(list[3], 'Bear');
-    assert.equal(list[4], 'Giraffe');
-    assert.ok(list.includes('Chick'));
+describe('Product Sprint 1 — LLM subjects', () => {
+  it('generates subjects via LLMProvider (no static theme arrays)', async () => {
+    const llm = new FakeLLMProvider();
+    const guide = await generateStyleGuideWithLLM(llm, 'Dinosaurs');
+    const subjects = await generateSubjectsWithLLM(llm, 'Dinosaurs', guide, 4);
+
+    assert.equal(subjects.length, 4);
+    assert.equal(llm.calls.filter((c) => c.purpose === 'illustration-subjects').length, 1);
+    assert.ok(subjects.every((s) => s.toLowerCase().includes('dinosaur')));
+    assert.equal(DEFAULT_ILLUSTRATION_COUNT, 24);
   });
 });
 
-describe('Product Sprint 1 — prompt composer', () => {
-  it('reuses Style Guide and only changes the subject', () => {
-    const guide = generateStyleGuide('Nursery Animals');
-    const elephant = composeIllustrationPrompt(guide, 'Elephant');
-    const lion = composeIllustrationPrompt(guide, 'Lion');
+describe('Product Sprint 1 — LLM prompts', () => {
+  it('generates prompts via LLMProvider following the Style Guide', async () => {
+    const llm = new FakeLLMProvider();
+    const guide = await generateStyleGuideWithLLM(llm, 'Nursery Animals');
+    const subjects = await generateSubjectsWithLLM(llm, 'Nursery Animals', guide, 2);
+    const prompts = await generatePromptsWithLLM(llm, guide, subjects);
 
-    assert.match(elephant, /Elephant/);
-    assert.match(lion, /Lion/);
-    assert.match(elephant, /Color palette:/);
-    assert.ok(elephant.includes(guide.illustrationStyle));
-    assert.ok(lion.includes(guide.illustrationStyle));
-    assert.match(elephant, /Keep visual consistency/);
-    assert.notEqual(elephant, lion);
-
-    const prompts = composeIllustrationPrompts(guide, ['Elephant', 'Lion']);
     assert.equal(prompts.length, 2);
-    assert.equal(prompts[0], elephant);
+    assert.equal(llm.calls.filter((c) => c.purpose === 'illustration-prompts').length, 1);
+    assert.ok(prompts[0]?.includes(subjects[0]!));
+    assert.ok(prompts[1]?.includes(subjects[1]!));
+    assert.notEqual(prompts[0], prompts[1]);
   });
 });
 
-describe('Product Sprint 1 — generateIllustrationBundle (mocked ImageProvider)', () => {
-  it('calls ImageProvider once and writes PNGs + JSON artifacts', async () => {
+describe('Product Sprint 1 — generateIllustrationBundle (mocked LLM + ImageProvider)', () => {
+  it('runs LLM content then ImageProvider once and writes artifacts', async () => {
     const outputDir = await mkdtemp(join(tmpdir(), 'bundle-sprint1-'));
-    const provider = new FakeImageProvider();
+    const images = new FakeImageProvider();
+    const llm = new FakeLLMProvider();
 
     try {
-      const result = await generateIllustrationBundle(provider, {
-        theme: 'Nursery Animals',
+      const result = await generateIllustrationBundle(images, llm, {
+        theme: 'Ocean',
         outputDir,
         count: 3,
         requestId: 'bundle-test-1',
       });
 
-      assert.equal(provider.invocationCount, 1);
-      assert.equal(provider.lastPrompt?.count, 3);
-      assert.equal(provider.lastPrompt?.purpose, 'illustration-bundle');
-      assert.equal(provider.lastPrompt?.prompts.length, 3);
-      assert.equal(provider.lastPrompt?.negativePrompt, result.styleGuide.negativeConstraints);
-      assert.match(provider.lastPrompt?.prompts[0] ?? '', /Elephant/);
-      assert.match(provider.lastPrompt?.prompts[1] ?? '', /Lion/);
-      assert.match(provider.lastPrompt?.prompts[2] ?? '', /Fox/);
+      assert.equal(llm.invocationCount, 3);
+      assert.deepEqual(
+        llm.calls.map((c) => c.purpose),
+        ['style-guide', 'illustration-subjects', 'illustration-prompts'],
+      );
+
+      assert.equal(images.invocationCount, 1);
+      assert.equal(images.lastPrompt?.count, 3);
+      assert.equal(images.lastPrompt?.purpose, 'illustration-bundle');
+      assert.equal(images.lastPrompt?.prompts.length, 3);
+      assert.equal(images.lastPrompt?.negativePrompt, result.styleGuide.negativeConstraints);
 
       assert.equal(result.subjects.length, 3);
       assert.equal(result.manifest.count, 3);
@@ -94,23 +93,16 @@ describe('Product Sprint 1 — generateIllustrationBundle (mocked ImageProvider)
       const styleGuide = JSON.parse(
         await readFile(join(outputDir, 'style-guide.json'), 'utf8'),
       ) as { theme: string };
-      assert.equal(styleGuide.theme, 'Nursery Animals');
+      assert.equal(styleGuide.theme, 'Ocean');
 
       const promptsFile = JSON.parse(await readFile(join(outputDir, 'prompts.json'), 'utf8')) as {
         prompts: { subject: string }[];
       };
       assert.equal(promptsFile.prompts.length, 3);
 
-      const bundle = JSON.parse(await readFile(join(outputDir, 'bundle.json'), 'utf8')) as {
-        illustrations: { file: string; subject: string }[];
-      };
-      assert.deepEqual(
-        bundle.illustrations.map((i) => i.file),
-        ['elephant.png', 'lion.png', 'fox.png'],
-      );
-
-      const elephantPng = await readFile(join(outputDir, 'elephant.png'));
-      assert.deepEqual(elephantPng, PLACEHOLDER_PNG);
+      const first = result.manifest.illustrations[0]!;
+      const png = await readFile(join(outputDir, first.file));
+      assert.deepEqual(png, PLACEHOLDER_PNG);
     } finally {
       await rm(outputDir, { recursive: true, force: true });
     }
