@@ -54,11 +54,18 @@ export { FakeImageProvider, FakeLLMProvider } from './providers/index.js';
 export type { ImageGenerationPrompt, PromptBuilder, PromptBuilderInput } from './prompts/index.js';
 export { DefaultPromptBuilder, buildItemPrompt } from './prompts/index.js';
 
-export type { StyleGuide, CreativeDirector } from './creative/index.js';
+export type {
+  StyleGuide,
+  CreativeDirector,
+  ProductMetadata,
+  ProductMetadataInput,
+} from './creative/index.js';
 export {
   parseStyleGuide,
   DEFAULT_ILLUSTRATION_COUNT,
   FakeCreativeDirector,
+  ETSY_TAG_COUNT,
+  parseProductMetadata,
 } from './creative/index.js';
 
 export type {

@@ -6,7 +6,7 @@
  * Style Guide / subject / prompt generation for illustration bundles.
  */
 export type LLMPurpose =
-  'style-guide' | 'illustration-subjects' | 'illustration-prompts' | 'general';
+  'style-guide' | 'illustration-subjects' | 'illustration-prompts' | 'product-metadata' | 'general';
 
 export interface LLMCompleteInput {
   /** Optional system instruction. */

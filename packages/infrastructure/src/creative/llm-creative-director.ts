@@ -1,7 +1,10 @@
 import {
+  parseProductMetadata,
   parseStyleGuide,
   type CreativeDirector,
   type LLMProvider,
+  type ProductMetadata,
+  type ProductMetadataInput,
   type StyleGuide,
 } from '@ai-product-factory/domain';
 
@@ -111,6 +114,35 @@ export class LLMCreativeDirector implements CreativeDirector {
       );
     }
     return cleaned;
+  }
+
+  async createProductMetadata(input: ProductMetadataInput): Promise<ProductMetadata> {
+    const theme = input.theme.trim() || input.styleGuide.theme;
+    const primaryHint = input.styleGuide.palette[0] ?? '#F5F0E8';
+    const secondaryHint = input.styleGuide.palette[1] ?? '#D4A373';
+    const result = await this.llm.complete({
+      purpose: 'product-metadata',
+      system:
+        'You write marketplace-agnostic commercial metadata for digital art bundles. Reply with JSON only.',
+      prompt: [
+        'Generate commercial product metadata for a printable illustration / poster bundle.',
+        `theme: ${theme}`,
+        `poster_count: ${input.posters.length}`,
+        `primary_color_hint: ${primaryHint}`,
+        `secondary_color_hint: ${secondaryHint}`,
+        `illustrationStyle: ${input.styleGuide.illustrationStyle}`,
+        `mood: ${input.styleGuide.mood}`,
+        `palette: ${input.styleGuide.palette.join(', ')}`,
+        `posters_json: ${JSON.stringify(input.posters)}`,
+        `subjects_json: ${JSON.stringify(input.subjects ?? [])}`,
+        'Return JSON with keys: title, shortDescription, longDescription, tags (exactly 13 strings),',
+        'materials (string array), primaryColor, secondaryColor, occasion, room, ageGroup, seoKeywords (string array).',
+        'longDescription should be Etsy-ready listing copy but reusable on other marketplaces.',
+        'No markdown. JSON only.',
+      ].join('\n'),
+    });
+
+    return parseProductMetadata(parseJsonObject(result.text));
   }
 }
 

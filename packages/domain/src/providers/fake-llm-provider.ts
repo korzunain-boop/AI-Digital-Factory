@@ -25,6 +25,9 @@ export class FakeLLMProvider implements LLMProvider {
     if (purpose === 'illustration-prompts') {
       return { text: fakePromptsJson(input.prompt) };
     }
+    if (purpose === 'product-metadata') {
+      return { text: fakeProductMetadataJson(input.prompt) };
+    }
     return { text: `{"ok":true,"echo":${JSON.stringify(input.prompt)}}` };
   }
 }
@@ -91,4 +94,28 @@ function fakePromptsJson(prompt: string): string {
       `Illustration of ${subject}. Style: ${styleSnippet}. Keep visual consistency with the collection Style Guide. Subject only: ${subject}.`,
   );
   return JSON.stringify({ prompts });
+}
+
+function fakeProductMetadataJson(prompt: string): string {
+  const theme = extractTheme(prompt);
+  const countMatch = prompt.match(/poster_count:\s*(\d+)/i);
+  const count = countMatch?.[1] ? Number(countMatch[1]) : 24;
+  const primary = prompt.match(/primary_color_hint:\s*(#[0-9A-Fa-f]{6})/i)?.[1] ?? '#F5F0E8';
+  const secondary = prompt.match(/secondary_color_hint:\s*(#[0-9A-Fa-f]{6})/i)?.[1] ?? '#D4A373';
+  const tags = Array.from({ length: 13 }, (_, i) =>
+    i === 0 ? `${theme} print` : `${theme} tag ${i}`,
+  );
+  return JSON.stringify({
+    title: `${theme} Printable Poster Bundle — ${count} Wall Art Prints`,
+    shortDescription: `Instant download ${theme} poster pack with ${count} matching printable designs.`,
+    longDescription: `Bring ${theme} into your space with this cohesive printable poster bundle.\n\nIncludes ${count} high-resolution designs.\n\nDigital download only.`,
+    tags,
+    materials: ['Digital download', 'Printable artwork'],
+    primaryColor: primary,
+    secondaryColor: secondary,
+    occasion: 'Housewarming',
+    room: 'Living Room',
+    ageGroup: 'Adults',
+    seoKeywords: [`${theme} printable`, `${theme} wall art`, 'digital download poster'],
+  });
 }

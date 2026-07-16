@@ -9,17 +9,18 @@ Source of truth (repo root):
 - [`PRODUCT_SPRINT_1.md`](./PRODUCT_SPRINT_1.md) — illustration collection bundle sprint
 - [`PRODUCT_SPRINT_2.md`](./PRODUCT_SPRINT_2.md) — CreativeDirector domain service
 - [`PRODUCT_SPRINT_3.md`](./PRODUCT_SPRINT_3.md) — deterministic poster layout
+- [`PRODUCT_SPRINT_4.md`](./PRODUCT_SPRINT_4.md) — commercial product metadata
 
 ## Project Status
 
-| Field                          | Status                                                                 |
-| ------------------------------ | ---------------------------------------------------------------------- |
-| **Current Milestone**          | Product Sprint 3 — Deterministic Poster Layout                         |
-| **Architecture Status**        | Approved; frozen (PROJECT / DECISIONS / SYSTEM unchanged)              |
-| **Business Validation Status** | Not started (gate defined in `PROJECT.md`)                             |
-| **Generator Status**           | Bundle + posters (`generate-bundle` / `generate-posters`)              |
-| **Research Status**            | NotImplemented placeholder (tests may stub success to reach Generator) |
-| **Publisher Status**           | NotImplemented placeholder — export not implemented yet                |
+| Field                          | Status                                                                                     |
+| ------------------------------ | ------------------------------------------------------------------------------------------ |
+| **Current Milestone**          | Product Sprint 4 — Commercial Product Metadata                                             |
+| **Architecture Status**        | Approved; frozen (PROJECT / DECISIONS / SYSTEM unchanged)                                  |
+| **Business Validation Status** | Not started (gate defined in `PROJECT.md`)                                                 |
+| **Generator Status**           | Bundle + posters + metadata (`generate-bundle` / `generate-posters` / `generate-metadata`) |
+| **Research Status**            | NotImplemented placeholder (tests may stub success to reach Generator)                     |
+| **Publisher Status**           | NotImplemented placeholder — export not implemented yet                                    |
 
 ## Prerequisites
 
@@ -35,18 +36,19 @@ cp .env.example .env
 
 ## Scripts
 
-| Command                    | Purpose                                    |
-| -------------------------- | ------------------------------------------ |
-| `npm run build`            | Build all workspaces that define `build`   |
-| `npm test`                 | Build packages + run unit tests (`tsx`)    |
-| `npm run generate`         | Run Clipart via GeneratorEngine (CLI)      |
-| `npm run generate-bundle`  | Illustration collection (CreativeDirector) |
-| `npm run generate-posters` | Printable posters + preview from a bundle  |
-| `npm run research`         | Standalone Etsy listing scrape (dev tool)  |
-| `npm run research-search`  | Standalone Etsy search scrape (dev tool)   |
-| `npm run lint`             | ESLint (minimal defaults)                  |
-| `npm run format`           | Prettier write                             |
-| `npm run format:check`     | Prettier check                             |
+| Command                     | Purpose                                    |
+| --------------------------- | ------------------------------------------ |
+| `npm run build`             | Build all workspaces that define `build`   |
+| `npm test`                  | Build packages + run unit tests (`tsx`)    |
+| `npm run generate`          | Run Clipart via GeneratorEngine (CLI)      |
+| `npm run generate-bundle`   | Illustration collection (CreativeDirector) |
+| `npm run generate-posters`  | Printable posters + preview from a bundle  |
+| `npm run generate-metadata` | Commercial `metadata.json` for a bundle    |
+| `npm run research`          | Standalone Etsy listing scrape (dev tool)  |
+| `npm run research-search`   | Standalone Etsy search scrape (dev tool)   |
+| `npm run lint`              | ESLint (minimal defaults)                  |
+| `npm run format`            | Prettier write                             |
+| `npm run format:check`      | Prettier check                             |
 
 Generate (Fake by default — no API key):
 
@@ -74,6 +76,13 @@ Printable posters from a bundle (Product Sprint 3):
 npm run generate-posters -- output/nursery-animals
 npm run generate-posters -- output/nursery-animals --paper US_LETTER
 # writes output/nursery-animals/posters/a4/*-poster.png + preview.png
+```
+
+Commercial metadata for a bundle (Product Sprint 4):
+
+```bash
+npm run generate-metadata -- output/nursery-animals
+# writes output/nursery-animals/metadata.json
 ```
 
 API boot stub (after build):
