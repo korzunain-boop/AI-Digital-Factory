@@ -1,18 +1,17 @@
-import type { ImageGenerationPrompt, ImageProvider, LLMProvider } from '@ai-product-factory/domain';
+import type {
+  CreativeDirector,
+  ImageGenerationPrompt,
+  ImageProvider,
+  StyleGuide,
+} from '@ai-product-factory/domain';
+import { DEFAULT_ILLUSTRATION_COUNT } from '@ai-product-factory/domain';
 
-import {
-  DEFAULT_ILLUSTRATION_COUNT,
-  generatePromptsWithLLM,
-  generateStyleGuideWithLLM,
-  generateSubjectsWithLLM,
-} from './llm-bundle-content.js';
 import {
   resolveImageBytes,
   saveBundleArtifacts,
   slugifyFileName,
   type BundleManifest,
 } from './save-bundle.js';
-import type { StyleGuide } from './style-guide.js';
 
 export interface GenerateBundleInput {
   readonly theme: string;
@@ -32,20 +31,19 @@ export interface GenerateBundleResult {
 }
 
 /**
- * Product Sprint 1 orchestrator (LLM-driven content):
+ * Product Sprint 2 orchestrator:
  *
  *   Theme
- *     → LLM Style Guide
- *     → LLM illustration subjects
- *     → LLM prompts
+ *     → CreativeDirector (Style Guide → subjects → prompts)
  *     → ImageProvider (unchanged)
  *     → disk artifacts
  *
- * No hardcoded theme catalogs. ImageProvider pipeline unchanged.
+ * BundleGenerator depends on CreativeDirector — not LLMProvider.
+ * ImageProvider / PromptBuilder / GeneratorEngine unchanged.
  */
 export async function generateIllustrationBundle(
   images: ImageProvider,
-  llm: LLMProvider,
+  director: CreativeDirector,
   input: GenerateBundleInput,
 ): Promise<GenerateBundleResult> {
   const theme = input.theme.trim();
@@ -55,9 +53,9 @@ export async function generateIllustrationBundle(
 
   const count = input.count ?? DEFAULT_ILLUSTRATION_COUNT;
 
-  const styleGuide = await generateStyleGuideWithLLM(llm, theme);
-  const subjects = await generateSubjectsWithLLM(llm, theme, styleGuide, count);
-  const prompts = await generatePromptsWithLLM(llm, styleGuide, subjects);
+  const styleGuide = await director.createStyleGuide(theme);
+  const subjects = await director.createSubjects({ theme, styleGuide, count });
+  const prompts = await director.createPrompts({ styleGuide, subjects });
 
   const prompt: ImageGenerationPrompt = {
     requestId: input.requestId ?? `bundle-${Date.now()}`,

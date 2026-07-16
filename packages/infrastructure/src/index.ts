@@ -20,3 +20,5 @@ export {
 
 export { HttpImageProviderBase } from './providers/image/http-image-provider-base.js';
 export { OpenAIImageProvider } from './providers/image/openai/openai-image-provider.js';
+
+export { LLMCreativeDirector } from './creative/llm-creative-director.js';

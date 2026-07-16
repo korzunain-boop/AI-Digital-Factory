@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import type { StyleGuide } from './style-guide.js';
+import type { StyleGuide } from '@ai-product-factory/domain';
 
 /** Minimal valid 1×1 PNG (placeholder when FakeImageProvider returns memory://). */
 export const PLACEHOLDER_PNG = Buffer.from(
