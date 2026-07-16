@@ -17,12 +17,17 @@
     "./config": {
       "types": "./dist/config/runtime-config.d.ts",
       "import": "./dist/config/runtime-config.js"
+    },
+    "./bundle": {
+      "types": "./dist/bundle/index.d.ts",
+      "import": "./dist/bundle/index.js"
     }
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "generate": "node dist/cli/generate.js"
+    "generate": "node dist/cli/generate.js",
+    "generate-bundle": "node dist/cli/generate-bundle.js"
   },
   "dependencies": {
     "@ai-product-factory/application": "*",

@@ -17,3 +17,5 @@ Thumbs.db
 !.vscode/extensions.json
 tools/etsy-research/output/*.json
 tools/etsy-research/output/debug.html
+output/
+apps/api/output/
