@@ -1,13 +1,17 @@
 /**
  * Product Sprint 1 — illustration collection bundle (no layout/PDF/ZIP).
+ * Content (Style Guide, subjects, prompts) is LLM-generated via LLMProvider.
  */
 
 export type { StyleGuide } from './style-guide.js';
-export { generateStyleGuide } from './style-guide.js';
+export { parseStyleGuide } from './style-guide.js';
 
-export { DEFAULT_ILLUSTRATION_COUNT, generateIllustrationList } from './illustration-list.js';
-
-export { composeIllustrationPrompt, composeIllustrationPrompts } from './prompt-composer.js';
+export {
+  DEFAULT_ILLUSTRATION_COUNT,
+  generateStyleGuideWithLLM,
+  generateSubjectsWithLLM,
+  generatePromptsWithLLM,
+} from './llm-bundle-content.js';
 
 export {
   PLACEHOLDER_PNG,

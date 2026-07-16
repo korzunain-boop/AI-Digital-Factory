@@ -41,11 +41,15 @@ export type {
   GeneratedImage,
   GeneratedImages,
   ImageProvider,
+  LLMCompleteInput,
+  LLMCompleteOutput,
+  LLMPurpose,
+  LLMProvider,
   StoragePutInput,
   StorageProvider,
   MarketplacePublishInput,
   MarketplaceProvider,
 } from './providers/index.js';
-export { FakeImageProvider } from './providers/index.js';
+export { FakeImageProvider, FakeLLMProvider } from './providers/index.js';
 export type { ImageGenerationPrompt, PromptBuilder, PromptBuilderInput } from './prompts/index.js';
 export { DefaultPromptBuilder, buildItemPrompt } from './prompts/index.js';

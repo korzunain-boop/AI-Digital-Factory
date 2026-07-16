@@ -2,75 +2,76 @@
 
 > Product sprint report (not an architecture change).  
 > `PROJECT.md`, `DECISIONS.md`, and `SYSTEM.md` remain frozen and unchanged.  
-> Previous engineering milestones (M1–M10) were not modified.
+> Previous engineering milestones (M1–M10 ImageProvider pipeline) were not redesigned.
 
 ## Goal
 
-Automatically generate a complete illustration collection for one bundle: Style Guide → subject list → prompts → ImageProvider → PNG + JSON artifacts.
+Automatically generate a complete illustration collection for one theme:
+
+```
+Theme
+  → LLM → Style Guide
+  → LLM → illustration subjects
+  → LLM → prompts
+  → ImageProvider → PNGs + JSON
+```
+
+User provides **only the theme** (e.g. `"Nursery Animals"`, `"Ocean"`, `"Dinosaurs"`).
 
 No layout, PDF, ZIP, preview, marketplace, QA, or dashboard.
 
 ## Implemented
 
-1. **Style Guide** (`generateStyleGuide`) — palette, illustration style, composition, lighting, mood, negative constraints; generated once and reused.
-2. **Illustration list** — default **24** subjects (e.g. Nursery Animals: Elephant, Lion, Fox, …).
-3. **Prompt composer** — one prompt per subject; shared Style Guide; subject is the only variable.
-4. **ImageProvider** — existing port via composition root (`FakeImageProvider` / `OpenAIImageProvider`).
-5. **Disk output** under `output/<theme-slug>/`:
-   - `elephant.png`, `lion.png`, …
-   - `style-guide.json`
-   - `prompts.json`
-   - `bundle.json`
-6. **CLI:** `npm run generate-bundle -- "Nursery Animals"`
+1. **`LLMProvider` abstraction** (Domain) + **`FakeLLMProvider`** (tests / offline CLI). No OpenAI LLM adapter yet.
+2. LLM generates **Style Guide** once (palette, style, composition, lighting, mood, negatives).
+3. LLM generates **illustration subjects** (default count **24**).
+4. LLM generates **one prompt per subject** (Style Guide reused; subject varies).
+5. Existing **ImageProvider** pipeline unchanged (`FakeImageProvider` / `OpenAIImageProvider`).
+6. Disk output under `output/<theme-slug>/`: PNGs + `style-guide.json` + `prompts.json` + `bundle.json`.
+7. **CLI:** `npm run generate-bundle -- "Nursery Animals"`
 
-## Files Added
+### Removed
 
-| Path                                       | Purpose                           |
-| ------------------------------------------ | --------------------------------- |
-| `apps/api/src/bundle/style-guide.ts`       | Style Guide model + generator     |
-| `apps/api/src/bundle/illustration-list.ts` | Subject list (default 24)         |
-| `apps/api/src/bundle/prompt-composer.ts`   | Style Guide + subject → prompt    |
-| `apps/api/src/bundle/save-bundle.ts`       | PNG resolve + JSON/PNG writer     |
-| `apps/api/src/bundle/bundle-generator.ts`  | Orchestrator                      |
-| `apps/api/src/bundle/index.ts`             | Barrel exports                    |
-| `apps/api/src/cli/generate-bundle.ts`      | CLI                               |
-| `tests/api/bundle-generator.test.ts`       | Unit tests (mocked ImageProvider) |
-| `PRODUCT_SPRINT_1.md`                      | This report                       |
+- Hardcoded Style Guide presets / theme hash palettes
+- Static subject arrays (e.g. nursery animal lists)
+- `switch(theme)` / theme-catalog branching
+- Hardcoded prompt template composer
+
+## Files
+
+| Path                                                 | Purpose                                |
+| ---------------------------------------------------- | -------------------------------------- |
+| `packages/domain/src/providers/llm-provider.ts`      | LLMProvider port                       |
+| `packages/domain/src/providers/fake-llm-provider.ts` | Fake LLM (deterministic JSON)          |
+| `apps/api/src/bundle/llm-bundle-content.ts`          | LLM → Style Guide / subjects / prompts |
+| `apps/api/src/bundle/style-guide.ts`                 | StyleGuide type + parse/validate       |
+| `apps/api/src/bundle/bundle-generator.ts`            | Orchestrator                           |
+| `apps/api/src/bundle/save-bundle.ts`                 | PNG/JSON writer                        |
+| `apps/api/src/cli/generate-bundle.ts`                | CLI                                    |
+| `tests/api/bundle-generator.test.ts`                 | Mocked LLM + ImageProvider tests       |
 
 ## Tests
 
-- Style Guide completeness + determinism
-- Nursery Animals list (24; Elephant…Giraffe…)
-- Prompt reuse of Style Guide; subject-only delta
-- `generateIllustrationBundle` with `FakeImageProvider` — one provider call; writes PNGs + JSON
-- `resolveImageBytes` for `memory://` and data URLs
+- Style Guide via mocked LLM
+- Subjects via mocked LLM (any theme; no static catalogs)
+- Prompts via mocked LLM
+- Full bundle: 3 LLM calls then 1 ImageProvider call; writes artifacts
 
 Run: `npm test`
 
-## Explicit non-goals (not implemented)
+## Explicit non-goals
 
-Poster layout, PDF, ZIP, preview, Marketplace, QA, Dashboard, Assembler.
+Poster layout, PDF, ZIP, preview, Marketplace, QA, Dashboard, Assembler, **real OpenAI LLM adapter**.
 
 ## Self-review
 
 ### How visual consistency is maintained
 
-- One **Style Guide** is generated per theme and locked for the whole run.
-- Every prompt embeds the same palette, illustration style, composition, lighting, mood, and negative constraints.
-- Only the **subject** string changes between prompts.
-- ImageProvider receives a single batch `ImageGenerationPrompt` with shared `style` / `negativePrompt` fields.
+- One Style Guide is produced by the LLM and locked for the pack.
+- Subject and prompt LLM calls receive that Style Guide.
+- Prompt instructions require shared style with subject-only variation.
+- ImageProvider still gets a single batch prompt with shared `style` / `negativePrompt`.
 
 ### What remains before commercial-ready posters
 
-1. **Assembler** — layout multiple illustrations onto poster templates.
-2. **PDF / ZIP packaging** — sellable ProductPackage export.
-3. **Previews** — marketplace-ready cover/thumbnail images.
-4. **QA** — validate pack completeness, resolution, style drift.
-5. **Durable Storage** — persist beyond ephemeral OpenAI URLs / placeholders.
-6. **Commercial Validation** — list and measure sell-through (business gate in `PROJECT.md`).
-
-### Technical notes
-
-- Fake provider writes a 1×1 placeholder PNG for `memory://` locations (offline/tests).
-- Live OpenAI packs of 24 images are slow/costly; use `IMAGE_PROVIDER=openai` only when intended.
-- ClipartGeneratorStrategy / DefaultPromptBuilder / PipelineExecutor were **not** changed.
+Assembler/layout, PDF/ZIP, previews, QA, durable storage, Commercial Validation, and a **real LLMProvider adapter** (OpenAI or other) replacing `FakeLLMProvider`.
