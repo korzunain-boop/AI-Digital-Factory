@@ -1,8 +1,7 @@
 /**
- * Style Guide shape for an illustration collection bundle.
- * Values come from {@link LLMProvider} — not hardcoded theme catalogs.
+ * Style Guide — creative identity for an illustration collection bundle.
+ * Produced by {@link CreativeDirector}; not hardcoded per theme.
  */
-
 export interface StyleGuide {
   readonly theme: string;
   readonly palette: readonly string[];
@@ -14,11 +13,11 @@ export interface StyleGuide {
 }
 
 /**
- * Validate / normalize LLM JSON into a StyleGuide.
+ * Validate / normalize structured JSON into a StyleGuide.
  */
 export function parseStyleGuide(value: unknown, fallbackTheme: string): StyleGuide {
   if (!value || typeof value !== 'object') {
-    throw new Error('Style Guide LLM response must be a JSON object');
+    throw new Error('Style Guide must be a JSON object');
   }
   const obj = value as Record<string, unknown>;
   const theme =

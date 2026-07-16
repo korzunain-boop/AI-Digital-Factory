@@ -1,17 +1,18 @@
 #!/usr/bin/env node
 /**
- * Product Sprint 1 CLI — generate a complete illustration collection.
+ * Product Sprint 2 CLI — generate a complete illustration collection.
  *
  *   npm run generate-bundle -- "Nursery Animals"
  *
- * LLM content via FakeLLMProvider until a real LLM adapter exists.
- * Images via composition-root ImageProvider (Fake / OpenAI).
+ * CreativeDirector: LLMCreativeDirector(FakeLLMProvider) until a real LLM adapter exists.
+ * Images via composition-root ImageProvider.
  */
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { FakeLLMProvider } from '@ai-product-factory/domain';
+import { LLMCreativeDirector } from '@ai-product-factory/infrastructure';
 
 import { generateIllustrationBundle, slugifyFileName } from '../bundle/index.js';
 import { createComposition } from '../bootstrap/composition-root.js';
@@ -27,7 +28,7 @@ Examples:
   npm run generate-bundle -- "Ocean"
   npm run generate-bundle -- "Dinosaurs"
 
-Env (images only — LLM adapter not implemented yet; FakeLLMProvider is used):
+Env (images — CreativeDirector uses FakeLLMProvider until OpenAI LLM exists):
   IMAGE_PROVIDER=fake|openai
   OPENAI_API_KEY=...
   OPENAI_IMAGE_MODEL=dall-e-3
@@ -68,23 +69,22 @@ async function main(argv: string[]): Promise<void> {
   }
 
   const { imageProvider } = createComposition(config);
-  const llm = new FakeLLMProvider();
+  const director = new LLMCreativeDirector(new FakeLLMProvider());
   const themeSlug = slugifyFileName(theme);
   const outputDir = resolve(resolveOutputRoot(), themeSlug);
 
   console.log(`Theme: ${theme}`);
-  console.log(`LLM provider: FakeLLMProvider (no OpenAI LLM adapter yet)`);
+  console.log(`CreativeDirector: LLMCreativeDirector (FakeLLMProvider)`);
   console.log(`Image provider: ${config.imageProvider}`);
   console.log(`Output: ${outputDir}`);
-  console.log('LLM → Style Guide → subjects → prompts…');
+  console.log('CreativeDirector → Style Guide → subjects → prompts…');
 
-  const result = await generateIllustrationBundle(imageProvider, llm, {
+  const result = await generateIllustrationBundle(imageProvider, director, {
     theme,
     outputDir,
   });
 
   console.log(`Style guide: ${result.styleGuide.illustrationStyle}`);
-  console.log(`LLM calls: ${llm.invocationCount}`);
   console.log(`Illustrations: ${result.subjects.length}`);
   console.log(`Saved: ${result.outputDir}`);
   console.log(`  - style-guide.json`);

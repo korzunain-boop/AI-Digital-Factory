@@ -7,17 +7,18 @@ Source of truth (repo root):
 - [`SYSTEM.md`](./SYSTEM.md) — engineering organization
 - [`MILESTONE_REPORT.md`](./MILESTONE_REPORT.md) — completed milestone log
 - [`PRODUCT_SPRINT_1.md`](./PRODUCT_SPRINT_1.md) — illustration collection bundle sprint
+- [`PRODUCT_SPRINT_2.md`](./PRODUCT_SPRINT_2.md) — CreativeDirector domain service
 
 ## Project Status
 
-| Field                          | Status                                                                 |
-| ------------------------------ | ---------------------------------------------------------------------- |
-| **Current Milestone**          | Product Sprint 1 — Illustration Collection Bundle                      |
-| **Architecture Status**        | Approved; frozen (PROJECT / DECISIONS / SYSTEM unchanged)              |
-| **Business Validation Status** | Not started (gate defined in `PROJECT.md`)                             |
-| **Generator Status**           | Clipart + `npm run generate-bundle` (Style Guide → 24 illustrations)   |
-| **Research Status**            | NotImplemented placeholder (tests may stub success to reach Generator) |
-| **Publisher Status**           | NotImplemented placeholder — export not implemented yet                |
+| Field                          | Status                                                                  |
+| ------------------------------ | ----------------------------------------------------------------------- |
+| **Current Milestone**          | Product Sprint 2 — CreativeDirector                                     |
+| **Architecture Status**        | Approved; frozen (PROJECT / DECISIONS / SYSTEM unchanged)               |
+| **Business Validation Status** | Not started (gate defined in `PROJECT.md`)                              |
+| **Generator Status**           | Bundle via CreativeDirector → ImageProvider (`npm run generate-bundle`) |
+| **Research Status**            | NotImplemented placeholder (tests may stub success to reach Generator)  |
+| **Publisher Status**           | NotImplemented placeholder — export not implemented yet                 |
 
 ## Prerequisites
 

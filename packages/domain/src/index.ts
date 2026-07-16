@@ -53,3 +53,10 @@ export type {
 export { FakeImageProvider, FakeLLMProvider } from './providers/index.js';
 export type { ImageGenerationPrompt, PromptBuilder, PromptBuilderInput } from './prompts/index.js';
 export { DefaultPromptBuilder, buildItemPrompt } from './prompts/index.js';
+
+export type { StyleGuide, CreativeDirector } from './creative/index.js';
+export {
+  parseStyleGuide,
+  DEFAULT_ILLUSTRATION_COUNT,
+  FakeCreativeDirector,
+} from './creative/index.js';
