@@ -6,15 +6,16 @@ Source of truth (repo root):
 - [`DECISIONS.md`](./DECISIONS.md) — architectural decision log
 - [`SYSTEM.md`](./SYSTEM.md) — engineering organization
 - [`MILESTONE_REPORT.md`](./MILESTONE_REPORT.md) — completed milestone log
+- [`PRODUCT_SPRINT_1.md`](./PRODUCT_SPRINT_1.md) — illustration collection bundle sprint
 
 ## Project Status
 
 | Field                          | Status                                                                 |
 | ------------------------------ | ---------------------------------------------------------------------- |
-| **Current Milestone**          | M10 — First Real Image Generation                                      |
-| **Architecture Status**        | Approved; composition root switches Fake ↔ OpenAI via env              |
+| **Current Milestone**          | Product Sprint 1 — Illustration Collection Bundle                      |
+| **Architecture Status**        | Approved; frozen (PROJECT / DECISIONS / SYSTEM unchanged)              |
 | **Business Validation Status** | Not started (gate defined in `PROJECT.md`)                             |
-| **Generator Status**           | Clipart wired; `npm run generate` (Fake default / OpenAI with API key) |
+| **Generator Status**           | Clipart + `npm run generate-bundle` (Style Guide → 24 illustrations)   |
 | **Research Status**            | NotImplemented placeholder (tests may stub success to reach Generator) |
 | **Publisher Status**           | NotImplemented placeholder — export not implemented yet                |
 
@@ -32,16 +33,17 @@ cp .env.example .env
 
 ## Scripts
 
-| Command                   | Purpose                                   |
-| ------------------------- | ----------------------------------------- |
-| `npm run build`           | Build all workspaces that define `build`  |
-| `npm test`                | Build packages + run unit tests (`tsx`)   |
-| `npm run generate`        | Run Clipart via GeneratorEngine (CLI)     |
-| `npm run research`        | Standalone Etsy listing scrape (dev tool) |
-| `npm run research-search` | Standalone Etsy search scrape (dev tool)  |
-| `npm run lint`            | ESLint (minimal defaults)                 |
-| `npm run format`          | Prettier write                            |
-| `npm run format:check`    | Prettier check                            |
+| Command                   | Purpose                                    |
+| ------------------------- | ------------------------------------------ |
+| `npm run build`           | Build all workspaces that define `build`   |
+| `npm test`                | Build packages + run unit tests (`tsx`)    |
+| `npm run generate`        | Run Clipart via GeneratorEngine (CLI)      |
+| `npm run generate-bundle` | Product Sprint 1 — illustration collection |
+| `npm run research`        | Standalone Etsy listing scrape (dev tool)  |
+| `npm run research-search` | Standalone Etsy search scrape (dev tool)   |
+| `npm run lint`            | ESLint (minimal defaults)                  |
+| `npm run format`          | Prettier write                             |
+| `npm run format:check`    | Prettier check                             |
 
 Generate (Fake by default — no API key):
 
@@ -54,6 +56,13 @@ Generate with OpenAI (real image; requires key in `.env` or env):
 ```bash
 # .env: IMAGE_PROVIDER=openai, OPENAI_API_KEY=sk-..., OPENAI_IMAGE_MODEL=dall-e-3
 IMAGE_PROVIDER=openai npm run generate
+```
+
+Illustration collection bundle (Product Sprint 1 — Fake by default):
+
+```bash
+npm run generate-bundle -- "Nursery Animals"
+# writes output/nursery-animals/{elephant,lion,...}.png + style-guide.json + prompts.json + bundle.json
 ```
 
 API boot stub (after build):
